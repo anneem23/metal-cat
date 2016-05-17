@@ -2,20 +2,16 @@ package org.anneem23.metal.cat.algorithm;
 
 import be.tarsos.dsp.AudioDispatcher;
 import be.tarsos.dsp.io.jvm.JVMAudioInputStream;
-import be.tarsos.dsp.onsets.ComplexOnsetDetector;
 import be.tarsos.dsp.onsets.OnsetHandler;
-import org.anneem23.metal.cat.input.AudioInput;
+import org.anneem23.metal.cat.input.Shared;
+import org.anneem23.metal.cat.mind.Brain;
 
 import javax.sound.sampled.*;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Stack;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * BeatRoot Model Object.
@@ -31,28 +27,37 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class BeatRoot implements BeatMatchingAlgorithm, OnsetHandler {
 
 
-    private static final float sampleRate = 48000;
-    private static final int bufferSize = 1024 * 4;
-    private static final int overlap = 768 * 4 ;
+    private static final float sampleRate = 44100;
+    /*private static final int bufferSize = 1024;
+    private static final int overlap = 512;*/
 
-    private final ComplexOnsetDetector _onsetDetector;
+    private static final int bufferSize = 1024;
+    private static final int overlap = 512;
+
+    private final BTrack _onsetDetector;
     private final TargetDataLine _line;
     private final AudioFormat _format;
     private final Queue<Double> _beats = new LinkedList<Double>();
     private int _bpm;
 
     private ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private final AudioDispatcher _dispatcher;
 
+    private final Brain _brain;
 
-
-    public BeatRoot(int idx) throws LineUnavailableException, IOException {
+    public BeatRoot(int idx, Brain brain) throws LineUnavailableException, IOException {
         _format = new AudioFormat(sampleRate, 16, 1, true, false);
 
-        _onsetDetector = new ComplexOnsetDetector(bufferSize);
-        AudioInput audioInput = new AudioInput(this);
-        _onsetDetector.setHandler(audioInput);
+        //AudioInput audioInput = new AudioInput(this);
+        Vector<Mixer.Info> mixerInfo = Shared.getMixerInfo(false, true);
+        _line = (TargetDataLine) AudioSystem.getMixer(mixerInfo.get(idx)).getLine(new DataLine.Info(TargetDataLine.class, _format));
 
-        _line = (TargetDataLine) AudioSystem.getMixer(audioInput.getInfo().get(idx)).getLine(new DataLine.Info(TargetDataLine.class, _format));
+        JVMAudioInputStream audioStream = new JVMAudioInputStream(new AudioInputStream(_line));
+        // create a new dispatcher
+        _dispatcher = new AudioDispatcher(audioStream, bufferSize, overlap);
+        _onsetDetector = new BTrack(_dispatcher, bufferSize, overlap);
+        _onsetDetector.setHandler(this);
+        _brain = brain;
 
         run();
     }
@@ -60,16 +65,13 @@ public class BeatRoot implements BeatMatchingAlgorithm, OnsetHandler {
     public void run() throws LineUnavailableException {
         _line.open(_format, bufferSize);
         _line.start();
-
-        JVMAudioInputStream audioStream = new JVMAudioInputStream(new AudioInputStream(_line));
+/*        JVMAudioInputStream audioStream = new JVMAudioInputStream(new AudioInputStream(_line));
         // create a new dispatcher
-        final AudioDispatcher dispatcher = new AudioDispatcher(audioStream, bufferSize, overlap);
-        // add a processor, handle percussion event.
-        dispatcher.addAudioProcessor(_onsetDetector);
+        final AudioDispatcher dispatcher = new AudioDispatcher(audioStream, bufferSize, overlap);*/
 
         executorService.execute(new Runnable() {
             public void run() {
-                dispatcher.run();
+                _dispatcher.run();
             }
         });
     }
@@ -79,25 +81,11 @@ public class BeatRoot implements BeatMatchingAlgorithm, OnsetHandler {
     }
 
     public void handleOnset(double v, double v1) {
-        if (!_beats.contains(v)) {
-            _beats.offer(v);
-            //System.out.println(v);
-
-            if (v >= 10) {
-                int beatsOfLastTenSeconds = 0;
-
-                Double[] arrBeats = _beats.toArray(new Double[_beats.size()]);
-
-                double limit = arrBeats[arrBeats.length - 1] - 10;
-                for (int i = (arrBeats.length-1); i >= 0; i--) {
-                    if (arrBeats[i] < limit) {
-                        break;
-                    }
-                    beatsOfLastTenSeconds++;
-                }
-                _bpm = beatsOfLastTenSeconds * 6;
-            }
-
+        System.out.println("handleOnset(double v=["+v+"], double v1=["+v1+"])");
+        try {
+            _brain.dance(_bpm, 0);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 }

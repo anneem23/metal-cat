@@ -49,6 +49,7 @@ public class Shared {
 		}
 		return infos;
 	}
+
 	public static String toLocalString(Object info)
 	{
 		if(!isWindows())

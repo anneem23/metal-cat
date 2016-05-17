@@ -1,9 +1,7 @@
 package org.anneem23.metal.cat;
 
-import org.anneem23.metal.cat.input.AudioInput;
 import org.anneem23.metal.cat.input.Shared;
 
-import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.Mixer;
 import java.io.IOException;

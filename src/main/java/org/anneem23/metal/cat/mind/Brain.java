@@ -2,13 +2,15 @@ package org.anneem23.metal.cat.mind;
 
 import be.tarsos.dsp.onsets.OnsetHandler;
 import org.anneem23.metal.cat.algorithm.BeatMatchingAlgorithm;
+import org.anneem23.metal.cat.algorithm.BeatRoot;
 import org.anneem23.metal.cat.body.Arm;
 
+import javax.sound.sampled.LineUnavailableException;
 import java.io.IOException;
 import java.net.URI;
 
 /**
- * MetalBrain of MetalCat.
+ * Brain of MetalCat.
  * <p>
  * <P>Various attributes of guitars, and related behaviour.
  * <p>
@@ -18,15 +20,15 @@ import java.net.URI;
  * @author anneem23
  * @version 2.0
  */
-public class MetalBrain {
+public class Brain {
     // 360 degrees in radians
     private static final double THREE_HUNDRED_SIXTY_DEGREES = Math.PI * 2;
 
     private final BeatMatchingAlgorithm _algorithm;
     private final Arm _arm;
 
-    public MetalBrain (BeatMatchingAlgorithm algorithm, Arm arm) {
-        _algorithm = algorithm;
+    public Brain(int idx, Arm arm) throws IOException, LineUnavailableException {
+        _algorithm = new BeatRoot(idx, this);
         _arm = arm;
     }
 
@@ -34,8 +36,8 @@ public class MetalBrain {
         double timeInScs = Double.valueOf(timeInMillis) / 1000.0;
 
         double result = Math.sin(timeInScs * hertz * THREE_HUNDRED_SIXTY_DEGREES);
-        System.out.println("result: " + result);
-        System.out.println("new arm position: " + ((int) (5 * result) + 12));
+        /*System.out.println("result: " + result);
+        System.out.println("new arm position: " + ((int) (5 * result) + 12));*/
         return (int) (5 * result) + 12;
     }
 
@@ -53,18 +55,19 @@ public class MetalBrain {
 
 
    public void dance(double bpm, long duration) throws InterruptedException {
-        long start = System.currentTimeMillis();
+        /*long start = System.currentTimeMillis();
         long currentTime;
         int lastPosition = 0;
         while ((currentTime = System.currentTimeMillis() - start) < duration) {
             double hertz = compute(null) / 60;
-            System.out.println("current hertz: " + hertz);
+            //System.out.println("current hertz: " + hertz);
             int newPosition = armPosition(hertz, currentTime);
             if (newPosition != lastPosition) {
                 _arm.move(newPosition);
                 lastPosition = newPosition;
             }
-        }
+        }*/
+       _arm.move();
     }
 
     /* public void dance(double bpm, long duration) throws InterruptedException {

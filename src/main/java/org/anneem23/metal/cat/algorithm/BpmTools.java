@@ -21,6 +21,6 @@ public class BpmTools implements BeatMatchingAlgorithm {
             System.out.println("bpm is " + bpm);
             return bpm;
         }
-        return -1.0;
+        return 0.0;
     }
 }

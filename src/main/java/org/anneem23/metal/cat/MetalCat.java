@@ -1,12 +1,9 @@
 package org.anneem23.metal.cat;
 
 import org.anneem23.metal.cat.algorithm.BeatRoot;
-import org.anneem23.metal.cat.algorithm.BpmTools;
 import org.anneem23.metal.cat.body.Arm;
-import org.anneem23.metal.cat.body.Ear;
 import org.anneem23.metal.cat.body.MetalCallback;
-import org.anneem23.metal.cat.input.Shared;
-import org.anneem23.metal.cat.mind.MetalBrain;
+import org.anneem23.metal.cat.mind.Brain;
 
 import javax.sound.sampled.LineUnavailableException;
 import java.io.IOException;
@@ -24,12 +21,12 @@ import java.net.URI;
 public class MetalCat implements MetalCallback {
 
     private final Arm arm;
-    private final MetalBrain brain;
+    private final Brain brain;
     //private final Ear ear;
 
     public MetalCat(int idx) throws IOException, LineUnavailableException {
         this.arm = new Arm();
-        this.brain = new MetalBrain(new BeatRoot(idx), this.arm);
+        this.brain = new Brain(idx, this.arm);
         //this.ear = new Ear(this);
     }
 
