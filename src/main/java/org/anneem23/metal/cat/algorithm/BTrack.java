@@ -6,82 +6,121 @@ import be.tarsos.dsp.AudioProcessor;
 import be.tarsos.dsp.onsets.OnsetDetector;
 import be.tarsos.dsp.onsets.OnsetHandler;
 import be.tarsos.dsp.onsets.PrintOnsetHandler;
-import com.sun.tools.javac.util.ArrayUtils;
 import org.anneem23.metal.cat.algorithm.function.ComplexSpectralDifference;
-import org.anneem23.metal.cat.algorithm.function.SpectralDifference;
 import org.anneem23.metal.cat.algorithm.function.OnsetDetectionFunction;
-
-import java.util.Arrays;
 
 public class BTrack implements AudioProcessor, OnsetDetector {
 
+    private OnsetHandler _onsetHandler;
     private final OnsetDetectionFunction _onsetDetector;
-    private final int _onsetDFBufferSize;
-    private final int _tempo;
-    private final boolean _tempoFixed;
-    private final double _tempoToLagFactor;
-    private final double[] _acf;
-    private double _estimatedTempo;
+
+    private int _m0 = 10;
+    private double _tightness = 5;
+    private double _alpha = 0.9;
+    private final double[] _acf = new double[512];
     private final int _hopSize;
 
-    private boolean _beatDueInFrame;
-    private int _beatCounter;
-    private int _m0;
+    private final int _onsetDFBufferSize;
     private double[] _onsetDF;
+
+    private double _estimatedTempo = 120.0;
+    private final int _tempo = 120;
+    private final boolean _tempoFixed = false;
+    private final double _tempoToLagFactor = 60.*44100./512.;
+    private double[][] _tempoTransitionMatrix = new double[41][41]; /**<  tempo transition matrix */
+    private double[] _tempoObservationVector = new double[41];
+
     private double[] _cumulativeScore;
+    private double _latestCumulativeScoreValue;
+
     private long _beatPeriod;
-    private double _tightness;
+    private boolean _beatDueInFrame;
+    private int _beatCounter = -1;
+
     private double[] _combFilterBankOutput = new double[128];
     private double[] _weightingVector = new double[128];
-    private double[] _tempoObservationVector = new double[41];
 
     private double[] _delta = new double[41];                       /**<  to hold final tempo candidate array */
     private double[] _prevDelta = new double[41];                   /**<  previous delta */
     private double[] _prevDeltaFixed = new double[41];              /**<  fixed tempo version of previous delta */
 
-    private double[][] _tempoTransitionMatrix = new double[41][41];
-    private double _latestCumulativeScoreValue = 0;
-    private double _alpha = 0.9;;
-    private OnsetHandler _onsetHandler;
 
-    /**<  tempo transition matrix */
+
 
 
     public BTrack(AudioDispatcher d, int fftSize, int hopSize){
+        double rayparam = 43;
         _onsetDetector = new ComplexSpectralDifference(fftSize, hopSize);
         _onsetDFBufferSize = (512*512)/hopSize;
         _onsetDF = new double[_onsetDFBufferSize];
         _cumulativeScore = new double[_onsetDFBufferSize];
-        _tempo = 120;
         _beatPeriod = Math.round(60/((((double) hopSize)/44100)*_tempo));
-
-        _m0 = 10;
-        _beatCounter = -1;
-
-        _tightness = 5;
-        _beatDueInFrame = false;
-        // tempo is not fixed
-        _tempoFixed = false;
-        _estimatedTempo = 120.0;
-        _tempoToLagFactor = 60.*44100./512.;
         _hopSize = hopSize;
-        _acf = new double[512];
+
 
         _onsetHandler = new PrintOnsetHandler();
 
         d.addAudioProcessor(this);
+
+        initializeArrays();
+
+        // create rayleigh weighting vector
+        for (int n = 0;n < 128;n++)
+        {
+            _weightingVector[n] = ((double) n / Math.pow(rayparam,2)) * Math.exp((-1*Math.pow((double)-n,2)) / (2*Math.pow(rayparam,2)));
+        }
+
+        // initialise prev_delta
+        for (int i = 0;i < 41;i++)
+        {
+            _prevDelta[i] = 1;
+        }
+
+        double t_mu = 41/2;
+        double m_sig;
+        double x;
+        // create tempo transition matrix
+        m_sig = 41/8;
+        for (int i = 0;i < 41;i++)
+        {
+            for (int j = 0;j < 41;j++)
+            {
+                x = j+1;
+                t_mu = i+1;
+                _tempoTransitionMatrix[i][j] = (1 / (m_sig * Math.sqrt(2*Math.PI))) * Math.exp( (-1*Math.pow((x-t_mu),2)) / (2*Math.pow(m_sig,2)) );
+            }
+        }
+
+
+    }
+
+    private void initializeArrays() {
+        // initialise df_buffer to zeros
+        for (int i = 0;i < _onsetDFBufferSize;i++)
+        {
+            _onsetDF[i] = 0;
+            _cumulativeScore[i] = 0;
+
+
+            if ((i %  Math.round(_beatPeriod)) == 0)
+            {
+                _onsetDF[i] = 1;
+            }
+
+        }
+
     }
 
 
     public boolean process(AudioEvent audioEvent) {
         double odfSample = _onsetDetector.onsetDetection(audioEvent);
         findOnsets(odfSample, audioEvent.getTimeStamp());
-
+        System.out.println("estimated tempo: " + _estimatedTempo);
         return true;
     }
 
     public void processingFinished() {
-        System.out.println("estimated tempo: " + _estimatedTempo);
+//        System.out.println("estimated tempo: " + _estimatedTempo);
     }
 
     private void findOnsets(double odfSample, double timeStamp){
@@ -112,16 +151,13 @@ public class BTrack implements AudioProcessor, OnsetDetector {
         // if we are halfway between beats
         if (_m0 == 0)
         {
-            System.out.println("predicting beat");
             predictBeat();
-            System.out.println("_m0=["+_m0+"]");
         }
 
         // if we are at a beat
         if (_beatCounter == 0)
         {
             _beatDueInFrame = true;	// indicate a beat should be output
-            System.out.println(">>>>>>> indicate a beat should be output odf sample: " + odfSample);
             _onsetHandler.handleOnset(timeStamp,-1.0);
             // recalculate the tempo
             calculateTempo();
@@ -248,13 +284,12 @@ public class BTrack implements AudioProcessor, OnsetDetector {
 
             _prevDelta[j] = _delta[j];
         }
-        System.out.println(maxind+"; "+maxval);
+
         _beatPeriod = Math.round((60.0*44100.0)/(((2*maxind)+80)*((double) _hopSize)));
 
         if (_beatPeriod > 0)
         {
             _estimatedTempo = 60.0/((((double) _hopSize) / 44100.0)*_beatPeriod);
-            System.out.println("estimated tempo: " + _estimatedTempo);
         }
     }
 
@@ -458,7 +493,6 @@ public class BTrack implements AudioProcessor, OnsetDetector {
 
             n++;
         }
-        System.out.println(_beatCounter);
         // set next prediction time
         _m0 = _beatCounter+Math.round(_beatPeriod/2);
 

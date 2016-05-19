@@ -65,9 +65,6 @@ public class BeatRoot implements BeatMatchingAlgorithm, OnsetHandler {
     public void run() throws LineUnavailableException {
         _line.open(_format, bufferSize);
         _line.start();
-/*        JVMAudioInputStream audioStream = new JVMAudioInputStream(new AudioInputStream(_line));
-        // create a new dispatcher
-        final AudioDispatcher dispatcher = new AudioDispatcher(audioStream, bufferSize, overlap);*/
 
         executorService.execute(new Runnable() {
             public void run() {

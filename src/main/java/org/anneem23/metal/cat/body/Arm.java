@@ -51,7 +51,7 @@ public class Arm {
         else
             moveUp();
 
-        Thread.sleep(20);
+        //Thread.sleep(20);
     }
 
 }
