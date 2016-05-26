@@ -103,9 +103,9 @@ public class AudioInput extends BeatRootOnsetEventHandler {
                     JVMAudioInputStream audioStream = new JVMAudioInputStream(stream);
                     // create a new dispatcher
                     //int size = 512;
-                    //int overlap = 256;
+                    //int OVERLAP = 256;
                     dispatcher = new AudioDispatcher(audioStream, bufferSize, overlap);
-                    //dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(bufferSize, overlap);
+                    //dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(BUFFER_SIZE, OVERLAP);
 
                     ComplexOnsetDetector onsetDetector = new ComplexOnsetDetector(bufferSize);
                     BeatRootOnsetEventHandler handler = new BeatRootOnsetEventHandler();

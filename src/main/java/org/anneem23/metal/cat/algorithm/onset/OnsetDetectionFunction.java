@@ -1,4 +1,4 @@
-package org.anneem23.metal.cat.algorithm.function;
+package org.anneem23.metal.cat.algorithm.onset;
 
 import be.tarsos.dsp.AudioEvent;
 

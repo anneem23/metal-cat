@@ -1,13 +1,11 @@
 package org.anneem23.metal.cat;
 
-import org.anneem23.metal.cat.algorithm.BeatRoot;
 import org.anneem23.metal.cat.body.Arm;
-import org.anneem23.metal.cat.body.MetalCallback;
-import org.anneem23.metal.cat.mind.Brain;
+import org.anneem23.metal.cat.body.Brain;
+import org.anneem23.metal.cat.body.Ear;
 
 import javax.sound.sampled.LineUnavailableException;
-import java.io.IOException;
-import java.net.URI;
+import javax.sound.sampled.TargetDataLine;
 
 /**
  * MetalCat.
@@ -18,31 +16,30 @@ import java.net.URI;
  * @author anneem23
  * @version 2.0
  */
-public class MetalCat implements MetalCallback {
+public class MetalCat {
 
     private final Arm arm;
     private final Brain brain;
-    //private final Ear ear;
+    private final Ear ear;
 
-    public MetalCat(int idx) throws IOException, LineUnavailableException {
+
+    public MetalCat(TargetDataLine line) {
+        System.out.println("Creating metal cat:");
         this.arm = new Arm();
-        this.brain = new Brain(idx, this.arm);
-        //this.ear = new Ear(this);
+        System.out.println("\tArm added!");
+        this.ear = new Ear(line);
+        System.out.println("\tEars added!");
+        this.brain = new Brain(this.ear.getDispatcher());
+        System.out.println("\tBrain added!");
+        this.brain.addMetalListener(arm);
     }
 
-    public void waitForMusic() {
+    public void waitForMusic() throws LineUnavailableException {
         sleep();
     }
 
-    private void sleep() {
-        //this.ear.listen();
-    }
-
-    public void dance(URI url) throws InterruptedException {
-        System.out.println("Metal Cat starts to dance!");
-        Double bpm = this.brain.compute(url);
-        if (bpm >= 0)
-            this.brain.dance(bpm, 120000);
+    private void sleep() throws LineUnavailableException {
+        this.ear.listen();
     }
 
 

@@ -1,4 +1,4 @@
-package org.anneem23.metal.cat.algorithm.function;
+package org.anneem23.metal.cat.algorithm.onset;
 
 import be.tarsos.dsp.AudioEvent;
 
@@ -37,7 +37,7 @@ public class SpectralDifference extends AbstractOnsetDetectionFunction {
             // add difference to sum
             odfSample = odfSample+diff;
 
-            // store magnitude spectrum bin for next detection function sample calculation
+            // store magnitude spectrum bin for next detection onset sample calculation
             _prevPower[i] = _power[i];
         }
 

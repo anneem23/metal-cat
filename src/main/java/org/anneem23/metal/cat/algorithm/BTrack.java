@@ -1,23 +1,31 @@
 package org.anneem23.metal.cat.algorithm;
 
-import be.tarsos.dsp.AudioDispatcher;
 import be.tarsos.dsp.AudioEvent;
-import be.tarsos.dsp.AudioProcessor;
 import be.tarsos.dsp.onsets.OnsetDetector;
 import be.tarsos.dsp.onsets.OnsetHandler;
 import be.tarsos.dsp.onsets.PrintOnsetHandler;
-import org.anneem23.metal.cat.algorithm.function.ComplexSpectralDifference;
-import org.anneem23.metal.cat.algorithm.function.OnsetDetectionFunction;
+import org.anneem23.metal.cat.algorithm.onset.HighFrequencySpectralDifference;
+import org.anneem23.metal.cat.algorithm.onset.OnsetDetectionFunction;
+import org.anneem23.metal.cat.input.Shared;
 
-public class BTrack implements AudioProcessor, OnsetDetector {
+/**
+ * BTrack does live beat tracking and is based on a
+ * combination of two algorithms:
+ *
+ * - Tempo estimation is based on the Davies and Plumbley method
+ *
+ * - Beat prediction is based on Ellis' dynamic programming algorithm
+ *
+ */
+public class BTrack implements OnsetDetector {
 
     private OnsetHandler _onsetHandler;
     private final OnsetDetectionFunction _onsetDetector;
 
     private int _m0 = 10;
-    private double _tightness = 5;
-    private double _alpha = 0.9;
-    private final double[] _acf = new double[512];
+    private double _tightness = 5;                                  /** tightness of transition weighting w1 (default: 5)*/
+    private double _alpha = 0.9;                                    /** adds balance between existing and past data in cumulative score (default: 0.9) */
+    private final double[] _acf = new double[Shared.OVERLAP];
     private final int _hopSize;
 
     private final int _onsetDFBufferSize;
@@ -26,14 +34,14 @@ public class BTrack implements AudioProcessor, OnsetDetector {
     private double _estimatedTempo = 120.0;
     private final int _tempo = 120;
     private final boolean _tempoFixed = false;
-    private final double _tempoToLagFactor = 60.*44100./512.;
+    private final double _tempoToLagFactor = 60.*(Shared.SAMPLE_RATE/(float)Shared.OVERLAP);
     private double[][] _tempoTransitionMatrix = new double[41][41]; /**<  tempo transition matrix */
     private double[] _tempoObservationVector = new double[41];
 
     private double[] _cumulativeScore;
     private double _latestCumulativeScoreValue;
 
-    private long _beatPeriod;
+    private float _beatPeriod;                                     /** the time (in DF samples) between two beats    */
     private boolean _beatDueInFrame;
     private int _beatCounter = -1;
 
@@ -42,25 +50,23 @@ public class BTrack implements AudioProcessor, OnsetDetector {
 
     private double[] _delta = new double[41];                       /**<  to hold final tempo candidate array */
     private double[] _prevDelta = new double[41];                   /**<  previous delta */
-    private double[] _prevDeltaFixed = new double[41];              /**<  fixed tempo version of previous delta */
+    private double[] _prevDeltaFixed = new double[41];
+    private double t_mu = 41.0/2.0;
+    private final double m_sig = 41/8;
 
 
-
-
-
-    public BTrack(AudioDispatcher d, int fftSize, int hopSize){
+    public BTrack(int fftSize, int hopSize){
         double rayparam = 43;
-        _onsetDetector = new ComplexSpectralDifference(fftSize, hopSize);
+        _onsetDetector = new HighFrequencySpectralDifference(fftSize, hopSize);
         _onsetDFBufferSize = (512*512)/hopSize;
         _onsetDF = new double[_onsetDFBufferSize];
         _cumulativeScore = new double[_onsetDFBufferSize];
-        _beatPeriod = Math.round(60/((((double) hopSize)/44100)*_tempo));
+        _beatPeriod = Math.round(60/((((double) hopSize)/ Shared.SAMPLE_RATE)*_tempo));
         _hopSize = hopSize;
 
 
         _onsetHandler = new PrintOnsetHandler();
 
-        d.addAudioProcessor(this);
 
         initializeArrays();
 
@@ -76,18 +82,17 @@ public class BTrack implements AudioProcessor, OnsetDetector {
             _prevDelta[i] = 1;
         }
 
-        double t_mu = 41/2;
-        double m_sig;
-        double x;
         // create tempo transition matrix
-        m_sig = 41/8;
+        ;
+        double x;
+
         for (int i = 0;i < 41;i++)
         {
             for (int j = 0;j < 41;j++)
             {
                 x = j+1;
                 t_mu = i+1;
-                _tempoTransitionMatrix[i][j] = (1 / (m_sig * Math.sqrt(2*Math.PI))) * Math.exp( (-1*Math.pow((x-t_mu),2)) / (2*Math.pow(m_sig,2)) );
+                _tempoTransitionMatrix[i][j] = (1 / (m_sig * Math.sqrt(2*Math.PI))) * Math.exp( (-1*Math.pow((x- t_mu),2)) / (2*Math.pow(m_sig,2)) );
             }
         }
 
@@ -111,21 +116,13 @@ public class BTrack implements AudioProcessor, OnsetDetector {
 
     }
 
-
-    public boolean process(AudioEvent audioEvent) {
-        double odfSample = _onsetDetector.onsetDetection(audioEvent);
-        findOnsets(odfSample, audioEvent.getTimeStamp());
-        System.out.println("estimated tempo: " + _estimatedTempo);
-        return true;
+    public double getSample(AudioEvent audioEvent) {
+        return _onsetDetector.onsetDetection(audioEvent);
     }
 
-    public void processingFinished() {
-//        System.out.println("estimated tempo: " + _estimatedTempo);
-    }
-
-    private void findOnsets(double odfSample, double timeStamp){
+    public void findOnsets(double odfSample, double timeStamp){
         // we need to ensure that the onset
-        // detection function sample is positive
+        // detection onset sample is positive
         odfSample = Math.abs(odfSample);
 
         // add a tiny constant to the sample to stop it from ever going
@@ -152,27 +149,38 @@ public class BTrack implements AudioProcessor, OnsetDetector {
         if (_m0 == 0)
         {
             predictBeat();
+            /*System.out.println("predictBeat() >>> _m0=["+_m0+"], _beatCounter=["+_beatCounter+"], _beatPeriod=["
+                    +_beatPeriod+"], _latestCumulativeScoreValue=["+_latestCumulativeScoreValue+"]");*/
         }
 
         // if we are at a beat
         if (_beatCounter == 0)
         {
             _beatDueInFrame = true;	// indicate a beat should be output
-            _onsetHandler.handleOnset(timeStamp,-1.0);
+            _onsetHandler.handleOnset(timeStamp,_estimatedTempo);
             // recalculate the tempo
             calculateTempo();
         }
     }
 
+    /**
+     * Recursive function building the weighted sum of the current
+     * ODF sample and the cumulative score from the past at the most
+     * likely position
+     *
+     * @param odfSample
+     */
     private void updateCumulativeScore(double odfSample) {
         int start, end, winsize;
         double max;
 
         start = _onsetDFBufferSize - Math.round(2*_beatPeriod);
         end = _onsetDFBufferSize - Math.round(_beatPeriod/2);
+        // interval in the past that is going to be searched
         winsize = end-start+1;
 
         double[] w1 = new double[winsize];
+        // most likely beat over the interval
         double v = -2*_beatPeriod;
         double wcumscore;
 
@@ -180,47 +188,50 @@ public class BTrack implements AudioProcessor, OnsetDetector {
         // create window
         for (int i = 0;i < winsize;i++)
         {
+            // to ensure that data exactly _beatPeriod samples in the past is preferred
+            // a weighting factor (log Gaussian transition weighting) is introduced
             w1[i] = Math.exp((-1*Math.pow(_tightness*Math.log(-v/_beatPeriod),2))/2);
             v = v+1;
         }
 
-        // calculate new cumulative score value
+        /* find the most likely beat position in the past */
         max = 0;
         int n = 0;
-        for (int i=start;i <= end;i++)
-        {
+        for (int i=start;i <= end;i++) {
+            // calculate new cumulative score value (max) from cumulative score and weighting factor
             wcumscore = _cumulativeScore[i]*w1[n];
 
-            if (wcumscore > max)
-            {
+            if (wcumscore > max) {
+                // replace max if wcumscore bigger
                 max = wcumscore;
             }
             n++;
         }
 
         // shift cumulative score back one
-        for (int i = 0;i < (_onsetDFBufferSize-1);i++)
-        {
+        for (int i = 0;i < (_onsetDFBufferSize-1);i++) {
             _cumulativeScore[i] = _cumulativeScore[i+1];
         }
 
-        // add new value to cumulative score
+        /* set new score and apply weighting   */
         _cumulativeScore[_onsetDFBufferSize-1] = ((1-_alpha)*odfSample) + (_alpha*max);
 
         _latestCumulativeScoreValue = _cumulativeScore[_onsetDFBufferSize-1];
 
     }
 
+    /**
+     * Regular tempo updates
+     */
     private void calculateTempo() {
         // adaptive threshold on input
         adaptiveThreshold(_onsetDF,512);
 
-        // calculate auto-correlation function of detection function
+        // calculate auto-correlation onset of detection onset
         calculateBalancedACF(_onsetDF);
 
         // calculate output of comb filterbank
         calculateOutputOfCombFilterBank();
-
 
         // adaptive threshold on rcf
         adaptiveThreshold(_combFilterBankOutput,128);
@@ -243,7 +254,7 @@ public class BTrack implements AudioProcessor, OnsetDetector {
         double maxind;
         double curval;
 
-        // if tempo is fixed then always use a fixed set of tempi as the previous observation probability function
+        // if tempo is fixed then always use a fixed set of tempi as the previous observation probability onset
         if (_tempoFixed)
         {
             for (int k = 0;k < 41;k++)
@@ -285,11 +296,11 @@ public class BTrack implements AudioProcessor, OnsetDetector {
             _prevDelta[j] = _delta[j];
         }
 
-        _beatPeriod = Math.round((60.0*44100.0)/(((2*maxind)+80)*((double) _hopSize)));
+        _beatPeriod = Math.round((60.0*Shared.SAMPLE_RATE)/(((2*maxind)+80)*((double) _hopSize)));
 
         if (_beatPeriod > 0)
         {
-            _estimatedTempo = 60.0/((((double) _hopSize) / 44100.0)*_beatPeriod);
+            _estimatedTempo = 60.0/((((double) _hopSize) / Shared.SAMPLE_RATE)*_beatPeriod);
         }
     }
 
@@ -315,14 +326,12 @@ public class BTrack implements AudioProcessor, OnsetDetector {
     }
 
     private void calculateOutputOfCombFilterBank() {
-        int numelem;
+        int numelem = 4;
 
-        for (int i = 0;i < 128;i++)
-        {
+        for (int i = 0;i < 128;i++) {
             _combFilterBankOutput[i] = 0;
         }
 
-        numelem = 4;
 
         for (int i = 2;i <= 127;i++) // max beat period
         {
@@ -330,7 +339,8 @@ public class BTrack implements AudioProcessor, OnsetDetector {
             {
                 for (int b = 1-a;b <= a-1;b++) // general state using normalisation of comb elements
                 {
-                    _combFilterBankOutput[i-1] = _combFilterBankOutput[i-1] + (_acf[(a*i+b)-1]*_weightingVector[i-1])/(2*a-1);	// calculate value for comb filter row
+                    // calculate value for comb filter row
+                    _combFilterBankOutput[i-1] = _combFilterBankOutput[i-1] + (_acf[(a*i+b)-1]*_weightingVector[i-1])/(2*a-1);
                 }
             }
         }
@@ -374,7 +384,7 @@ public class BTrack implements AudioProcessor, OnsetDetector {
         // find threshold for bulk of samples across a moving average from [i-p_pre,i+p_post]
         for (i = t+1;i < dfSize-p_post;i++)
         {
-            // use Mean from apache commons-math
+            // use Mean from apache commons-math?
             x_thresh[i] = calculateMeanOfArray(onsetDF,i-p_pre,i+p_post);
         }
         // for last few samples calculate threshold, again, not enough samples to do as above
@@ -384,7 +394,7 @@ public class BTrack implements AudioProcessor, OnsetDetector {
             x_thresh[i] = calculateMeanOfArray(onsetDF,k,dfSize);
         }
 
-        // subtract the threshold from the detection function and check that it is not less than 0
+        // subtract the threshold from the detection onset and check that it is not less than 0
         for (i = 0;i < dfSize;i++)
         {
             onsetDF[i] = onsetDF[i] - x_thresh[i];
@@ -421,7 +431,7 @@ public class BTrack implements AudioProcessor, OnsetDetector {
     private void predictBeat() {
         int windowSize = (int) _beatPeriod;
         double[] futureCumulativeScore = new double[_onsetDFBufferSize + windowSize];
-        double[] w2 = new double[windowSize];
+        double[] futureWindow = new double[windowSize];
         // copy cumscore to first part of fcumscore
         for (int i = 0;i < _onsetDFBufferSize;i++)
         {
@@ -432,7 +442,7 @@ public class BTrack implements AudioProcessor, OnsetDetector {
         double v = 1;
         for (int i = 0;i < windowSize;i++)
         {
-            w2[i] = Math.exp((-1*Math.pow((v - (_beatPeriod/2)),2))   /  (2*Math.pow((_beatPeriod/2) ,2)));
+            futureWindow[i] = Math.exp((-1*Math.pow((v - (_beatPeriod/2)),2))   /  (2*Math.pow((_beatPeriod/2) ,2)));
             v++;
         }
 
@@ -441,11 +451,11 @@ public class BTrack implements AudioProcessor, OnsetDetector {
         int start = _onsetDFBufferSize - Math.round(2*_beatPeriod);
         int end = _onsetDFBufferSize - Math.round(_beatPeriod/2);
         int pastwinsize = end-start+1;
-        double[] w1 = new double[pastwinsize];
+        double[] pastWindow = new double[pastwinsize];
 
         for (int i = 0;i < pastwinsize;i++)
         {
-            w1[i] = Math.exp((-1*Math.pow(_tightness*Math.log(-v/_beatPeriod),2))/2);
+            pastWindow[i] = Math.exp((-1*Math.pow(_tightness*Math.log(-v/_beatPeriod),2))/2);
             v = v+1;
         }
 
@@ -464,7 +474,7 @@ public class BTrack implements AudioProcessor, OnsetDetector {
             n = 0;
             for (int k=start;k <= end;k++)
             {
-                wcumscore = futureCumulativeScore[k]*w1[n];
+                wcumscore = futureCumulativeScore[k]*pastWindow[n];
 
                 if (wcumscore > max)
                 {
@@ -483,7 +493,7 @@ public class BTrack implements AudioProcessor, OnsetDetector {
 
         for (int i = _onsetDFBufferSize;i < (_onsetDFBufferSize+windowSize);i++)
         {
-            wcumscore = futureCumulativeScore[i]*w2[n];
+            wcumscore = futureCumulativeScore[i]*futureWindow[n];
 
             if (wcumscore > max)
             {
@@ -494,7 +504,7 @@ public class BTrack implements AudioProcessor, OnsetDetector {
             n++;
         }
         // set next prediction time
-        _m0 = _beatCounter+Math.round(_beatPeriod/2);
+        _m0 = _beatCounter+Math.round(_beatPeriod/2.0f);
 
     }
 

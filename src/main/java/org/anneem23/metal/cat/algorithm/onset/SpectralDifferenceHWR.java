@@ -1,18 +1,7 @@
-package org.anneem23.metal.cat.algorithm.function;
+package org.anneem23.metal.cat.algorithm.onset;
 
 import be.tarsos.dsp.AudioEvent;
 
-/**
- * SpectralDifferenceHWR Model Object.
- * <p>
- * <P>Various attributes of guitars, and related behaviour.
- * <p>
- * <P>Note that {@link BigDecimal} is used to model the price - not double or float.
- * See {@link #SpectralDifferenceHWR(String, BigDecimal, Integer)} for more information.
- *
- * @author anneem23
- * @version 2.0
- */
 public class SpectralDifferenceHWR extends AbstractOnsetDetectionFunction {
 
 
@@ -24,13 +13,9 @@ public class SpectralDifferenceHWR extends AbstractOnsetDetectionFunction {
         double diff;
         double sum = 0;	// initialise sum to zero
 
-        float[] audioBuffer = audioEvent.getFloatBuffer().clone();
-        _fft.powerPhaseFFT(audioBuffer, _power, _phase);
+        _fft.powerPhaseFFT(audioEvent.getFloatBuffer().clone(), _power, _phase);
 
-
-
-        for (int i = 0;i < _frameSize/2;i++)
-        {
+        for (int i = 0;i < _frameSize/2;i++) {
             // calculate difference
             diff = _power[i] - _prevPower[i];
 
@@ -41,9 +26,7 @@ public class SpectralDifferenceHWR extends AbstractOnsetDetectionFunction {
                 sum = sum+diff;
             }
 
-
-
-            // store magnitude spectrum bin for next detection function sample calculation
+            // store magnitude spectrum bin for next detection onset sample calculation
             _prevPower[i] = -_power[i];
         }
 

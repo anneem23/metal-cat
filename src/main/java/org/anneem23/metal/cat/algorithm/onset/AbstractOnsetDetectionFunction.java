@@ -1,6 +1,5 @@
-package org.anneem23.metal.cat.algorithm.function;
+package org.anneem23.metal.cat.algorithm.onset;
 
-import be.tarsos.dsp.AudioEvent;
 import be.tarsos.dsp.util.fft.FFT;
 import be.tarsos.dsp.util.fft.HammingWindow;
 
@@ -17,13 +16,13 @@ abstract class AbstractOnsetDetectionFunction implements OnsetDetectionFunction 
 
 
 
-    protected final int _frameSize;						/**< audio framesize */
+    protected final int _frameSize;					/**< audio framesize */
     private final int _hopSize;						/**< audio hopsize */
     protected final FFT _fft;
     protected float[] _prevPower;
 
     public AbstractOnsetDetectionFunction(int frameSize, int hopSize) {
-        _fft = new FFT(frameSize, new HammingWindow());
+        _fft = new FFT(frameSize/2, new HammingWindow());
         _hopSize = hopSize; // set hopsize
         _frameSize = frameSize; // set framesize
 

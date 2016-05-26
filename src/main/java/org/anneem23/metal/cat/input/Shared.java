@@ -31,6 +31,10 @@ import java.nio.charset.Charset;
 import java.util.Vector;
 
 public class Shared {
+
+	public static final float SAMPLE_RATE = 44100;
+	public static final int BUFFER_SIZE = 1024;
+	public static final int OVERLAP = 512;
 	
 	public static Vector<Info> getMixerInfo(
 			final boolean supportsPlayback, final boolean supportsRecording) {
