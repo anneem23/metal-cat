@@ -2,12 +2,15 @@ package org.anneem23.metal.cat.body;
 
 import be.tarsos.dsp.AudioDispatcher;
 import be.tarsos.dsp.io.jvm.JVMAudioInputStream;
-import org.anneem23.metal.cat.input.Shared;
+import org.anneem23.metal.cat.audio.AudioSampleReader;
+import org.anneem23.metal.cat.audio.Shared;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -29,29 +32,50 @@ public class Ear {
 
     private final TargetDataLine _line;
     private final AudioDispatcher _dispatcher;
+    private AudioSampleReader audioSampleReader;
+    private double[] _audioData;
 
     public Ear(TargetDataLine line) {
         _line = line;
 
         JVMAudioInputStream audioStream = new JVMAudioInputStream(new AudioInputStream(_line));
         // create a new dispatcher
-        _dispatcher = new AudioDispatcher(audioStream, Shared.BUFFER_SIZE, Shared.OVERLAP);
+        _dispatcher = new AudioDispatcher(audioStream, Shared.FRAME_SIZE, Shared.HOPSIZE);
         executorService = Executors.newFixedThreadPool(10);
     }
+
+    public Ear(String filename) throws IOException, UnsupportedAudioFileException {
+        executorService = Executors.newFixedThreadPool(10);
+        _dispatcher = null;
+        _line = null;
+        File audioFile = new File(filename);
+        audioSampleReader = new AudioSampleReader(audioFile);
+    }
+
 
     public AudioDispatcher getDispatcher() {
         return _dispatcher;
     }
 
-    public void listen() throws LineUnavailableException {
-        System.out.println("Metal cat starts to listen for music!");
-        _line.open(AUDIO_FORMAT, Shared.BUFFER_SIZE);
-        _line.start();
+    /*public void listen() throws LineUnavailableException {
+        ////System.out.println("Metal cat starts to listen for music!");
+        if (_line != null) {
+            _line.open(AUDIO_FORMAT, Shared.FRAME_SIZE);
+            _line.start();
+        }
 
         executorService.execute(new Runnable() {
             public void run() {
                 _dispatcher.run();
             }
         });
+    }*/
+
+    public void listen() throws IOException, UnsupportedAudioFileException {
+        _audioData = audioSampleReader.getSamples(audioSampleReader.readBytes());
+    }
+
+    public double[] getResult() {
+        return _audioData;
     }
 }

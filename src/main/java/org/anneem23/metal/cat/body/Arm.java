@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author anneem23
  * @version 2.0
  */
-public class Arm implements MetalCallback {
+public class Arm implements Moveable {
 
     private static final int START_POSITION = 20;    // 360 degrees in radians
     private static final double THREE_HUNDRED_SIXTY_DEGREES = Math.PI * 2;
@@ -51,14 +51,14 @@ public class Arm implements MetalCallback {
     public void updateBpm(double bpm) {
         double hertz = bpm / 60.0;
         double result = Math.sin(hertz * THREE_HUNDRED_SIXTY_DEGREES);
-        //System.out.println("new arm position: " + ((int) (-4 * result) + 14));
+        ////System.out.println("new arm position: " + ((int) (-4 * result) + 14));
         this.position.set((int) (-4 * result) + 14);
         this.duration.set((int) (1000 / hertz));
     }
 
     @Override
     public void dance() throws InterruptedException {
-        System.out.println("Metal cats arm starts to move.");
+        //System.out.println("Metal cats arm starts to move.");
         executorService.execute(new Runnable() {
             @Override
             public void run() {
