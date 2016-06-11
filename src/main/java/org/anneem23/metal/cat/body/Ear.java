@@ -2,7 +2,8 @@ package org.anneem23.metal.cat.body;
 
 import be.tarsos.dsp.AudioDispatcher;
 import be.tarsos.dsp.io.jvm.JVMAudioInputStream;
-import org.anneem23.metal.cat.audio.AudioSampleReader;
+import org.anneem23.metal.cat.audio.AudioInputStreamProcessor;
+import org.anneem23.metal.cat.audio.AudioSampleConverter;
 import org.anneem23.metal.cat.audio.Shared;
 
 import javax.sound.sampled.AudioFormat;
@@ -32,8 +33,9 @@ public class Ear {
 
     private final TargetDataLine _line;
     private final AudioDispatcher _dispatcher;
-    private AudioSampleReader audioSampleReader;
+    private AudioSampleConverter audioSampleConverter;
     private double[] _audioData;
+    private AudioInputStreamProcessor streamProcessor;
 
     public Ear(TargetDataLine line) {
         _line = line;
@@ -49,7 +51,8 @@ public class Ear {
         _dispatcher = null;
         _line = null;
         File audioFile = new File(filename);
-        audioSampleReader = new AudioSampleReader(audioFile);
+        streamProcessor = new AudioInputStreamProcessor(audioFile);
+        audioSampleConverter = new AudioSampleConverter(audioFormat);
     }
 
 
@@ -72,7 +75,7 @@ public class Ear {
     }*/
 
     public void listen() throws IOException, UnsupportedAudioFileException {
-        _audioData = audioSampleReader.getSamples(audioSampleReader.readBytes());
+        _audioData = audioSampleConverter.convert(streamProcessor.readBytes());
     }
 
     public double[] getResult() {

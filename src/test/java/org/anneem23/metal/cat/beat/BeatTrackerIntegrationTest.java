@@ -1,7 +1,8 @@
 package org.anneem23.metal.cat.beat;
 
+import org.anneem23.metal.cat.audio.AudioInputStreamProcessor;
 import org.anneem23.metal.cat.beat.onset.ComplexSpectralDifference;
-import org.anneem23.metal.cat.audio.AudioSampleReader;
+import org.anneem23.metal.cat.audio.AudioSampleConverter;
 import org.anneem23.metal.cat.audio.Shared;
 import org.junit.Test;
 
@@ -79,8 +80,9 @@ public class BeatTrackerIntegrationTest {
 
     private double[] getData(String resourceName) throws IOException, UnsupportedAudioFileException {
         InputStream inputStream = BeatTrackerIntegrationTest.class.getResourceAsStream("/" + resourceName);
-        AudioSampleReader audioSampleReader = new AudioSampleReader(inputStream);
-        return audioSampleReader.getSamples(audioSampleReader.readBytes());
+        AudioInputStreamProcessor ais = new AudioInputStreamProcessor(inputStream);
+        AudioSampleConverter audioSampleConverter = new AudioSampleConverter(audioFormat);
+        return audioSampleConverter.convert(ais.readBytes());
     }
 
 }

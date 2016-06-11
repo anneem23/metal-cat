@@ -24,6 +24,7 @@
 
 package org.anneem23.metal.cat.audio;
 
+import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Mixer.Info;
 import java.io.UnsupportedEncodingException;
@@ -35,6 +36,7 @@ public class Shared {
 	public static final float SAMPLE_RATE = 44100;
 	public static final int HOPSIZE = 512;
 	public static final int FRAME_SIZE = 2*HOPSIZE;
+	public static final AudioFormat AUDIO_FORMAT = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
 	
 	public static Vector<Info> getMixerInfo(
 			final boolean supportsPlayback, final boolean supportsRecording) {

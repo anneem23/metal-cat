@@ -5,6 +5,7 @@ import be.tarsos.dsp.onsets.OnsetHandler;
 import be.tarsos.dsp.onsets.PrintOnsetHandler;
 import be.tarsos.dsp.resample.Resampler;
 import org.anneem23.metal.cat.audio.Shared;
+import org.anneem23.metal.cat.beat.onset.OnsetDetectionFunction;
 
 import java.io.IOException;
 

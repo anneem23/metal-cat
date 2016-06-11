@@ -1,7 +1,6 @@
 package org.anneem23.metal.cat.beat.onset;
 
 import be.tarsos.dsp.util.fft.HammingWindow;
-import org.anneem23.metal.cat.beat.OnsetDetectionFunction;
 import org.anneem23.metal.cat.beat.fft.Complex;
 import org.anneem23.metal.cat.beat.fft.FFT;
 
