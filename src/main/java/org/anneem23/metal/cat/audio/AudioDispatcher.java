@@ -1,8 +1,6 @@
 package org.anneem23.metal.cat.audio;
 
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.TargetDataLine;
-import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -10,15 +8,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <p>
  *
  * @author anneem23
- * @version 2.0
  */
 public class AudioDispatcher implements Runnable {
 
     private final CopyOnWriteArrayList<AudioSampleListener> _listeners = new CopyOnWriteArrayList();
-    private final TargetDataLine _line;
+    private final AudioProcessor _audioProcessor;
 
-    public AudioDispatcher(TargetDataLine targetDataLine) {
-        _line = targetDataLine;
+    public AudioDispatcher(AudioProcessor audioProcessor) {
+        _audioProcessor = audioProcessor;
     }
 
 
@@ -28,22 +25,17 @@ public class AudioDispatcher implements Runnable {
 
     @Override
     public void run() {
-        final AudioProcessor audioProcessor = new TargetDataLineProcessor(_line);
-        final AudioSampleConverter sampleConverter = new AudioSampleConverter(audioProcessor.getFormat());
+        final AudioSampleConverter sampleConverter = new AudioSampleConverter(_audioProcessor.getFormat());
 
         try {
-            _line.start();
-            _line.open(audioProcessor.getFormat());
-
-            while (audioProcessor.bytesAvailable()) {
-                byte[] audioData = audioProcessor.readBytes(Shared.FRAME_SIZE);
+            _audioProcessor.openStream();
+            while (_audioProcessor.bytesAvailable()) {
+                byte[] audioData = _audioProcessor.readBytes(Shared.FRAME_SIZE);
 
                 dispatch(sampleConverter.convert(audioData));
             }
-        } catch (IOException | LineUnavailableException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            _line.close();
         }
     }
 

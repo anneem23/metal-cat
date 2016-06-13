@@ -5,8 +5,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 
-import static javax.sound.sampled.AudioSystem.getAudioInputStream;
-
 public class AudioSampleConverter {
 
     private final AudioFormat _audioFormat;
@@ -20,7 +18,6 @@ public class AudioSampleConverter {
         long total = (frameLength * _audioFormat.getFrameSize() * 8) / _audioFormat.getSampleSizeInBits();
         return total / _audioFormat.getChannels();
     }
-
 
     public double[] convert(byte[] abAudioData) {
         ShortBuffer buf=ByteBuffer.wrap(abAudioData).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();

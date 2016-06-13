@@ -1,7 +1,7 @@
 package org.anneem23.metal.cat.beat.fft;
 
 /******************************************************************************
- *          University of Princeton edu code
+ *  University of Princeton (§9.7 Data Analysis.)
  *
  *  Compilation:  javac Complex.java
  *  Execution:    java Complex
@@ -132,7 +132,28 @@ public class Complex {
         return sum;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Complex)) return false;
 
+        Complex complex = (Complex) o;
+
+        if (Double.compare(complex.re, re) != 0) return false;
+        return Double.compare(complex.im, im) == 0;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result;
+        long temp;
+        temp = Double.doubleToLongBits(re);
+        result = (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(im);
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        return result;
+    }
 
     // sample client for testing
     public static void main(String[] args) {

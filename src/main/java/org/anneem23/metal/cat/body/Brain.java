@@ -3,9 +3,11 @@ package org.anneem23.metal.cat.body;
 import be.tarsos.dsp.AudioEvent;
 import be.tarsos.dsp.AudioProcessor;
 import be.tarsos.dsp.onsets.OnsetHandler;
+import org.anneem23.metal.cat.audio.AudioSampleListener;
+import org.anneem23.metal.cat.audio.Shared;
+import org.anneem23.metal.cat.beat.BeatTrackingAlgorithm;
 import org.anneem23.metal.cat.beat.BeatTracker;
 import org.anneem23.metal.cat.beat.onset.ComplexSpectralDifference;
-import org.anneem23.metal.cat.audio.Shared;
 
 import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -16,18 +18,22 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * @author anneem23
  * @version 2.0
  */
-public class Brain implements OnsetHandler, AudioProcessor {
+public class Brain implements AudioSampleListener, AudioProcessor, OnsetHandler {
 
 
-    private final BeatTracker beatTracker;
+    private final BeatTrackingAlgorithm _beatTracker;
     private CopyOnWriteArrayList<Moveable> _metalListeners = new CopyOnWriteArrayList<>();
 
     private boolean initialized;
     private long counter;
 
+    public Brain(BeatTrackingAlgorithm algorithm) {
+        _beatTracker = algorithm;
+    }
+
     public Brain() throws IOException {
-        beatTracker = new BeatTracker(Shared.HOPSIZE, new ComplexSpectralDifference(Shared.FRAME_SIZE, Shared.HOPSIZE), Shared.SAMPLE_RATE);
-        beatTracker.setHandler(this);
+        _beatTracker = new BeatTracker(Shared.HOPSIZE, new ComplexSpectralDifference(Shared.FRAME_SIZE, Shared.HOPSIZE), Shared.SAMPLE_RATE);
+        ((BeatTracker) _beatTracker).setHandler(this);
     }
 
 
@@ -79,51 +85,36 @@ public class Brain implements OnsetHandler, AudioProcessor {
         initialized = false;
     }
 
-    public double[] trackBeats(double[] audioData) {
+    @Override
+    public void updateSamples(double[] audioData) {
         double[] buffer = new double[Shared.HOPSIZE];	// buffer to hold one Shared.HOPSIZE worth of audio samples
 
         // get number of audio frames, given the hop size and signal length
-        double numframes = (int) Math.floor(((double) audioData.length) / ((double) Shared.HOPSIZE));
+        double numFrames = (int) Math.floor(((double) audioData.length) / ((double) Shared.HOPSIZE));
 
-        double[] beats = new double[5000];
-        int beatnum = 0;
-
-        ///////////////////////////////////////////
-        //////// Begin Processing Loop ////////////
-
-        for (int i=0;i < numframes;i++)
-        {
+        for (int i=0;i < numFrames;i++) {
             // add new samples to frame
-            for (int n = 0; n < Shared.HOPSIZE; n++)
-            {
+            for (int n = 0; n < Shared.HOPSIZE; n++) {
                 buffer[n] = audioData[(i*Shared.HOPSIZE)+n];
-                //System.out.println (buffer[n])  ;
             }
 
-            this.beatTracker.processAudioFrame(buffer);
-            if (this.beatTracker.isBeatDueInFrame())
-            {
-                beats[beatnum] = this.beatTracker.getBeatTimeInSeconds(i,Shared.HOPSIZE,44100);
-                System.out.println (beatnum + ". beat at " + beats[beatnum] + " secs");
-                beatnum = beatnum + 1;
+            _beatTracker.processAudioFrame(buffer);
+            if (_beatTracker.isBeatDueInFrame()) {
+                System.out.println("beat found.");
+                moveAll();
             }
         }
 
+    }
 
-        ////////// END PROCESS ///////////////////
-
-        double[] beats_out = new double[beatnum];          // create output array
-
-        // copy beats into output array
-        for (int i = 0;i < beatnum;i++)
-        {
-            beats_out[i] = beats[i];
+    private void moveAll() {
+        for (Moveable moveable : _metalListeners) {
+            try {
+                moveable.dance();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                //TODO log error/warning
+            }
         }
-
-
-
-        ////////// CREATE ARRAY AND RETURN IT ///////////////////
-
-        return beats_out;
     }
 }

@@ -1,24 +1,28 @@
 package org.anneem23.metal.cat.tools;
 
 import org.anneem23.metal.cat.audio.Shared;
+import org.anneem23.metal.cat.audio.TargetDataLineProcessor;
 
 import javax.sound.sampled.*;
-import java.io.File;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.Vector;
 
 import static javax.sound.sampled.AudioSystem.getMixer;
 
-public class MicrophoneRecorder {
+/**
+ * AudioInputPrinter Model Object.
+ * <p>
+ * <P>Various attributes of guitars, and related behaviour.
+ * <p>
+ * <P>Note that {@link BigDecimal} is used to model the price - not double or float.
+ * See {@link #AudioInputPrinter(String, BigDecimal, Integer)} for more information.
+ *
+ * @author anneem23
+ * @version 2.0
+ */
+public class AudioInputPrinter {
 
-    // path of the wav file
-
-    public static final File wavFile = new File("/tmp/recording.wav");
-
-    // format of audio file
-
-    public static final AudioFileFormat.Type fileType = AudioFileFormat.Type.WAVE;
 
     public static void main(String[] args) throws LineUnavailableException {
         AudioFormat format = new AudioFormat(48000, 16, 1, true, false);
@@ -30,8 +34,8 @@ public class MicrophoneRecorder {
             Mixer m = getMixer(info);
             Line.Info[] lineInfos = m.getSourceLineInfo();
             for (Line.Info lineInfo:lineInfos){
-                //System.out.println (info.getName());
-                //System.out.println ("\t---"+lineInfo);
+                System.out.println (info.getName());
+                System.out.println ("\t---"+lineInfo);
                 Line line = m.getLine(lineInfo);
                 System.out.println("\t-----"+line);
                 System.out.println("\t-----"+line.getLineInfo());
@@ -68,17 +72,21 @@ public class MicrophoneRecorder {
             try {
                 if (mixer.isLineSupported(targetInfo)) {
                     TargetDataLine targetLine = (TargetDataLine) mixer.getLine(targetInfo);
-                    targetLine.open(format);
-                    targetLine.start();
+                    TargetDataLineProcessor processor = new TargetDataLineProcessor(targetLine);
+                    processor.openStream();
 
 
                     int numBytesRead;
-                    byte[] targetData = new byte[targetLine.getBufferSize() / 5];
+                    byte[] targetData = new byte[Shared.FRAME_SIZE];
 
-                    AudioInputStream ais = new AudioInputStream(targetLine);
-                    System.out.println("Start recording...");
+                    System.out.println("Start audio ...");
                     // start recording
-                    AudioSystem.write(ais, fileType, wavFile);
+
+                    do {
+                        targetData = processor.readBytes(targetData.length);
+                        System.out.println(Arrays.toString(targetData));
+                    } while (processor.bytesAvailable());
+
                 } else {
                     System.out.println("Line is not supported. Mixer needs one of ");
                     for (Line.Info li : mixer.getTargetLineInfo())
@@ -98,5 +106,4 @@ public class MicrophoneRecorder {
 
 
     }
-
 }

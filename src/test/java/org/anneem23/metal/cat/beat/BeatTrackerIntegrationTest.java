@@ -1,9 +1,9 @@
 package org.anneem23.metal.cat.beat;
 
 import org.anneem23.metal.cat.audio.AudioInputStreamProcessor;
-import org.anneem23.metal.cat.beat.onset.ComplexSpectralDifference;
 import org.anneem23.metal.cat.audio.AudioSampleConverter;
 import org.anneem23.metal.cat.audio.Shared;
+import org.anneem23.metal.cat.beat.onset.ComplexSpectralDifference;
 import org.junit.Test;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -12,7 +12,6 @@ import java.io.InputStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.mockito.Matchers.any;
 
 
 public class BeatTrackerIntegrationTest {
@@ -81,7 +80,7 @@ public class BeatTrackerIntegrationTest {
     private double[] getData(String resourceName) throws IOException, UnsupportedAudioFileException {
         InputStream inputStream = BeatTrackerIntegrationTest.class.getResourceAsStream("/" + resourceName);
         AudioInputStreamProcessor ais = new AudioInputStreamProcessor(inputStream);
-        AudioSampleConverter audioSampleConverter = new AudioSampleConverter(audioFormat);
+        AudioSampleConverter audioSampleConverter = new AudioSampleConverter(ais.getFormat());
         return audioSampleConverter.convert(ais.readBytes());
     }
 

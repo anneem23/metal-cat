@@ -1,10 +1,11 @@
 package org.anneem23.metal.cat;
 
+import org.anneem23.metal.cat.audio.AudioDispatcher;
+import org.anneem23.metal.cat.audio.TargetDataLineProcessor;
 import org.anneem23.metal.cat.body.Arm;
 import org.anneem23.metal.cat.body.Brain;
 import org.anneem23.metal.cat.body.Ear;
 
-import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.IOException;
@@ -16,7 +17,6 @@ import java.io.IOException;
  * <p>
  *
  * @author anneem23
- * @version 2.0
  */
 public class MetalCat {
 
@@ -29,10 +29,11 @@ public class MetalCat {
         //System.out.println("Creating metal cat:");
         this.arm = new Arm();
         //System.out.println("\tArm added!");
-        this.ear = new Ear(line);
+        //Try out in case of problems: JVMAudioInputStream audioStream = new JVMAudioInputStream(new AudioInputStream(line));
+        this.ear = new Ear(new AudioDispatcher(new TargetDataLineProcessor(line)));
         //System.out.println("\tEars added!");
         this.brain = new Brain();
-        this.ear.getDispatcher().addAudioProcessor(this.brain);
+        this.ear.getDispatcher().register(this.brain);
         //System.out.println("\tBrain added!");
         this.brain.addMetalListener(arm);
     }
@@ -44,22 +45,18 @@ public class MetalCat {
         this.arm = null;
         //System.out.println("\tArm added!");
         this.ear = new Ear(fileName);
-        //System.out.println("\tEars added!");
+        //System.out.println("\tEar added!");
         this.brain = new Brain();
         //System.out.println("\tBrain added!");
         //this.brain.addMetalListener(arm);
     }
 
-    public void waitForMusic() throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+    public void waitForMusic() throws IOException, UnsupportedAudioFileException {
         sleep();
     }
 
-    private void sleep() throws LineUnavailableException, IOException, UnsupportedAudioFileException {
+    private void sleep() throws IOException, UnsupportedAudioFileException {
         this.ear.listen();
-        double[] trackdata = this.brain.trackBeats(this.ear.getResult());
-        int i = 0;
-        for (double beat : trackdata)
-            System.out.println((i++) + " " + beat);
     }
 
 }

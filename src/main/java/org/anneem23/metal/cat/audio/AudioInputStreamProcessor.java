@@ -58,6 +58,11 @@ public class AudioInputStreamProcessor implements AudioProcessor {
     }
 
     @Override
+    public void openStream() throws Exception {
+        // nothing to do here, input stream is already open
+    }
+
+    @Override
     public byte[] readBytes(int bytes) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] abBuffer = new byte[bytes];

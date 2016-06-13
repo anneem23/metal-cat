@@ -9,6 +9,8 @@ import java.io.IOException;
  */
 public interface AudioProcessor {
 
+    void openStream() throws Exception;
+
     byte[] readBytes(int bytes) throws IOException;
 
     boolean bytesAvailable();

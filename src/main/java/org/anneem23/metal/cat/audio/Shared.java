@@ -40,18 +40,18 @@ public class Shared {
 	
 	public static Vector<Info> getMixerInfo(
 			final boolean supportsPlayback, final boolean supportsRecording) {
-		final Vector<Info> infos = new Vector<Info>();
+		final Vector<Info> infos = new Vector<>();
 		final Info[] mixers = AudioSystem.getMixerInfo();
 		for (final Info mixerinfo : mixers) {
 			if (supportsRecording
 					&& AudioSystem.getMixer(mixerinfo).getTargetLineInfo().length != 0) {
 				// Mixer capable of recording audio if target LineWavelet length != 0
 				infos.add(mixerinfo);
-			} /*else if (supportsPlayback
+			} else if (supportsPlayback
 					&& AudioSystem.getMixer(mixerinfo).getSourceLineInfo().length != 0) {
 				// Mixer capable of audio play back if source LineWavelet length != 0
 				infos.add(mixerinfo);
-			}*/
+			}
 		}
 		return infos;
 	}

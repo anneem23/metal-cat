@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import javax.sound.sampled.*;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Vector;
 
 import static javax.sound.sampled.AudioSystem.getMixer;
@@ -20,20 +21,22 @@ public class TargetDataLineProcessorTest {
     public void testReadCanReadBytesFromMicrophone() throws LineUnavailableException, IOException, UnsupportedAudioFileException {
         givenMicrophoneInput();
         whenReadingData();
-        thenExpectedDataIs(1024);
+        thenExpectedDataIs(Shared.FRAME_SIZE);
     }
     private void thenExpectedDataIs(int numberOfBytes) {
         assertThat(_audioData.length, is(numberOfBytes));
     }
 
-    private void whenReadingData() throws IOException, UnsupportedAudioFileException {
-        _audioData = _targetDataLineProcessor.readBytes(1024);
+    private void whenReadingData() throws IOException {
+        _audioData = _targetDataLineProcessor.readBytes(Shared.FRAME_SIZE);
+
         _line.close();
     }
 
     private void givenMicrophoneInput() throws LineUnavailableException {
         final Vector<Mixer.Info> infos = Shared.getMixerInfo(false, true);
         Mixer.Info info = infos.get(1);
+
         DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class, Shared.AUDIO_FORMAT);
         _line = (TargetDataLine) getMixer(info).getLine(targetInfo);
         _line.start();

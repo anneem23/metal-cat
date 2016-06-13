@@ -1,6 +1,8 @@
 package org.anneem23.metal.cat.beat.fft;
 
 /******************************************************************************
+ *  University of Princeton (§9.7 Data Analysis.)
+ *
  *  Compilation:  javac FFT.java
  *  Execution:    java FFT N
  *  Dependencies: Complex.java

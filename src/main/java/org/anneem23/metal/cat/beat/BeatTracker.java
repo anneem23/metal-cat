@@ -20,7 +20,7 @@ import java.io.IOException;
  * - Beat prediction is based on Ellis' dynamic programming beat
  *
  */
-public class BeatTracker implements OnsetDetector {
+public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
 
     private OnsetHandler _onsetHandler;
     private final OnsetDetectionFunction _onsetDetector;
@@ -35,12 +35,10 @@ public class BeatTracker implements OnsetDetector {
     private final float[] _onsetDF;
 
     private double _estimatedTempo;
-    private final double _tempoToLagFactor = 60.*(Shared.SAMPLE_RATE/(float)Shared.HOPSIZE);
     private final double[][] _tempoTransitionMatrix = new double[41][41]; /**<  tempo transition matrix */
     private final double[] _tempoObservationVector = new double[41];
 
     private final float[] _cumulativeScore;
-    private float _latestCumulativeScoreValue;
 
     private float _beatPeriod;                                     /** the time (in DF samples) between two beats    */
     private boolean _beatDueInFrame;
@@ -125,14 +123,15 @@ public class BeatTracker implements OnsetDetector {
 
 
 
+    @Override
     public void processAudioFrame(double[] audioBuffer) {
         double odfSample = _onsetDetector.calculateOnsetDetectionFunctionSample(audioBuffer);
         processOnsetDetectionFunctionSample(odfSample);
     }
 
-    private void processOnsetDetectionFunctionSample(double odfSample) {
+    private void processOnsetDetectionFunctionSample(double onsetDetectionFunctionSample) {
         // to ensure that the onset detection onset sample is positive
-        odfSample = Math.abs(odfSample);
+        double odfSample = Math.abs(onsetDetectionFunctionSample);
 
         // add a tiny constant to the sample to stop it from ever going
         // to zero. this is to avoid problems further down the line
@@ -206,9 +205,9 @@ public class BeatTracker implements OnsetDetector {
         return _onsetDetector.onsetDetection(audioEvent);
     }*/
 
-    public void findOnsets(double odfSample, long frame){
+    public void findOnsets(double onsetDetectionFunctionSample, long frame){
         // to ensure that the onset detection onset sample is positive
-        odfSample = Math.abs(odfSample);
+        double odfSample = Math.abs(onsetDetectionFunctionSample);
 
         // add a tiny constant to the sample to stop it from ever going
         // to zero. this is to avoid problems further down the line
@@ -307,7 +306,7 @@ public class BeatTracker implements OnsetDetector {
         _cumulativeScore[_onsetDFBufferSize-1] = (float) (((1 - alpha) * odfSample) + (alpha * max));
         //System.out.println("(((1 - alpha) * odfSample) + (alpha * " + max + ")) = " +_cumulativeScore[_onsetDFBufferSize-1]);
         // and set latestCumScoreVal to this value
-        _latestCumulativeScoreValue = _cumulativeScore[_onsetDFBufferSize-1];
+        float _latestCumulativeScoreValue = _cumulativeScore[_onsetDFBufferSize - 1];
 
     }
 
@@ -333,6 +332,7 @@ public class BeatTracker implements OnsetDetector {
         // calculate tempo observation vector from beat period observation vector
         for (int i = 0;i < 41;i++)
         {
+            double _tempoToLagFactor = 60. * (Shared.SAMPLE_RATE / (float) Shared.HOPSIZE);
             t_index = (int) Math.round(_tempoToLagFactor / ((double) ((2*i)+80)));
             t_index2 = (int) Math.round(_tempoToLagFactor / ((double) ((4*i)+160)));
 
@@ -615,6 +615,7 @@ public class BeatTracker implements OnsetDetector {
 
     }
 
+    @Override
     public boolean isBeatDueInFrame() {
         return _beatDueInFrame;
     }

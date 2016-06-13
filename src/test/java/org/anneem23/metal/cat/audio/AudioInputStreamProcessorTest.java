@@ -8,7 +8,7 @@ import java.io.InputStream;
 
 import static javax.sound.sampled.AudioSystem.getAudioInputStream;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 public class AudioInputStreamProcessorTest {
 

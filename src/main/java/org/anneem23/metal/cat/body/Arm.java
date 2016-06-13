@@ -58,19 +58,9 @@ public class Arm implements Moveable {
 
     @Override
     public void dance() throws InterruptedException {
-        //System.out.println("Metal cats arm starts to move.");
-        executorService.execute(new Runnable() {
-            @Override
-            public void run() {
-                while (isDancing()) {
-                    try {
-                        move(position.get(),duration.get());
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
+        SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), 20);
+        Thread.sleep(20);
+        SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), START_POSITION);
     }
 
     @Override

@@ -38,8 +38,8 @@ public class AudioSampleConverterTest {
 
     private void givenTestFileWithName(String name) throws UnsupportedAudioFileException, IOException {
         InputStream inputStream = AudioSampleConverterTest.class.getResourceAsStream(name);
-        _audioSampleConverter = new AudioSampleConverter(audioFormat);
         AudioInputStreamProcessor audioProcessor = new AudioInputStreamProcessor(inputStream);
+        _audioSampleConverter = new AudioSampleConverter(audioProcessor.getFormat());
         _audioData = audioProcessor.readBytes();
     }
 
