@@ -22,55 +22,53 @@ import java.io.IOException;
  */
 public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
 
-    private OnsetHandler _onsetHandler;
-    private final OnsetDetectionFunction _onsetDetector;
+    private OnsetHandler onsetHandler;
+    private final OnsetDetectionFunction onsetDetectionFunction;
 
-    private int _m0;
-    private final double _tightness;
+    private int m0;
+    private final double tightness;
     /** adds balance between existing and past data in cumulative score (default: 0.9) */
-    private final double[] _acf;
-    private final int _hopSize;
+    private final double[] acf;
+    private final int hopSize;
 
-    private final int _onsetDFBufferSize;
-    private final float[] _onsetDF;
+    private final int onsetDFBufferSize;
+    private final float[] onsetDF;
 
-    private double _estimatedTempo;
-    private final double[][] _tempoTransitionMatrix = new double[41][41]; /**<  tempo transition matrix */
-    private final double[] _tempoObservationVector = new double[41];
+    private double estimatedTempo;
+    private final double[][] tempoTransitionMatrix = new double[41][41]; /**<  tempo transition matrix */
+    private final double[] tempoObservationVector = new double[41];
 
-    private final float[] _cumulativeScore;
+    private final float[] cumulativeScore;
 
-    private float _beatPeriod;                                     /** the time (in DF samples) between two beats    */
-    private boolean _beatDueInFrame;
-    private int _beatCounter = -1;
+    private float beatPeriod;                                     /** the time (in DF samples) between two beats    */
+    private boolean beatDueInFrame;
+    private int beatCounter = -1;
 
-    private final double[] _combFilterBankOutput;
-    private final float[] _weightingVector = new float[128];
+    private final double[] combFilterBankOutput;
+    private final float[] weightingVector = new float[128];
 
-    private final double[] _delta = new double[41];                       /**<  to hold final tempo candidate array */
-    private final double[] _prevDelta = new double[41];                   /**<  previous delta */
-    private final double[] _prevDeltaFixed;
-    private double[] _resampledOnsetDF;
-
-    private int round = 1;
+    private final double[] deltas = new double[41];                       /**<  to hold final tempo candidate array */
+    private final double[] previousDeltas = new double[41];                   /**<  previous delta */
+    private final double[] previousDeltasFixed;
+    private double[] resampledOnsetDetectionFunctionData;
 
     public BeatTracker(int hopSize, OnsetDetectionFunction onsetDetector, float sampleRate) throws IOException {
-        _onsetDetector = onsetDetector;
-        _onsetDFBufferSize = (512*512)/hopSize;
-        _onsetDF = new float[_onsetDFBufferSize];
-        _resampledOnsetDF = new double[512];
-        _cumulativeScore = new float[_onsetDFBufferSize];
+        onsetDetectionFunction = onsetDetector;
+        onsetDFBufferSize = (512*512)/hopSize;
+        onsetDF = new float[onsetDFBufferSize];
+        resampledOnsetDetectionFunctionData = new double[512];
+        cumulativeScore = new float[onsetDFBufferSize];
         // initialize beat period with 120 bpm
-        _beatPeriod = Math.round(60/((((double) hopSize)/ sampleRate)* 120));
+        beatPeriod = Math.round(60/((((double) hopSize)/ sampleRate)* 120));
         // initialize estimated tempo with 120 bpm
-        _estimatedTempo = 120.0;
-        _hopSize = hopSize;
-        _onsetHandler = new PrintOnsetHandler();
-        _m0 = 10;
-        _acf = new double[hopSize];
-        _tightness = 5;
-        _combFilterBankOutput = new double[128];
-        _prevDeltaFixed = new double[41];
+        estimatedTempo = 120.0;
+        this.hopSize = hopSize;
+        onsetHandler = new PrintOnsetHandler();
+        m0 = 10;
+        acf = new double[hopSize];
+        tightness = 5;
+        combFilterBankOutput = new double[128];
+        previousDeltasFixed = new double[41];
 
 
         initializeArrays();
@@ -79,13 +77,13 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         // create rayleigh weighting vector
         for (int n = 0;n < 128;n++)
         {
-            _weightingVector[n] = (float) (((double) n / Math.pow(rayparam,2)) * Math.exp((-1*Math.pow((double)-n,2)) / (2*Math.pow(rayparam,2))));
+            weightingVector[n] = (float) (((double) n / Math.pow(rayparam,2)) * Math.exp((-1*Math.pow((double)-n,2)) / (2*Math.pow(rayparam,2))));
         }
 
         // initialise prev_delta
         for (int i = 0;i < 41;i++)
         {
-            _prevDelta[i] = 1;
+            previousDeltas[i] = 1;
         }
 
         // create tempo transition matrix
@@ -95,10 +93,10 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         {
             for (int j = 0;j < 41;j++)
             {
-                x = j+1;
-                double t_mu = i + 1;
-                double m_sig = 41 / 8;
-                _tempoTransitionMatrix[i][j] = (1 / (m_sig * Math.sqrt(2*Math.PI))) * Math.exp( (-1*Math.pow((x- t_mu),2)) / (2*Math.pow(m_sig,2)) );
+                x = (double) j+1;
+                double tMu = (double) i + 1;
+                double mSig = (double) 41 / 8;
+                tempoTransitionMatrix[i][j] = (1 / (mSig * Math.sqrt(2*Math.PI))) * Math.exp( (-1*Math.pow(x- tMu,2)) / (2*Math.pow(mSig,2)) );
             }
         }
 
@@ -107,14 +105,14 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
 
     private void initializeArrays() {
         // initialise df_buffer to zeros
-        for (int i = 0;i < _onsetDFBufferSize;i++)
+        for (int i = 0; i < onsetDFBufferSize; i++)
         {
-            _onsetDF[i] = 0;
-            _cumulativeScore[i] = 0;
+            onsetDF[i] = 0;
+            cumulativeScore[i] = 0;
 
 
-            if ((i %  Math.round(_beatPeriod)) == 0) {
-                _onsetDF[i] = 1;
+            if ((i %  Math.round(beatPeriod)) == 0) {
+                onsetDF[i] = 1;
             }
 
         }
@@ -125,7 +123,7 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
 
     @Override
     public void processAudioFrame(double[] audioBuffer) {
-        double odfSample = _onsetDetector.calculateOnsetDetectionFunctionSample(audioBuffer);
+        double odfSample = onsetDetectionFunction.calculateOnsetDetectionFunctionSample(audioBuffer);
         processOnsetDetectionFunctionSample(odfSample);
     }
 
@@ -137,35 +135,31 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         // to zero. this is to avoid problems further down the line
         odfSample = odfSample + 0.0001;
 
-        _m0--;
-        _beatCounter--;
-        _beatDueInFrame = false;
+        m0--;
+        beatCounter--;
+        beatDueInFrame = false;
 
         // move all samples back one step
-        for (int i=0;i < (_onsetDFBufferSize-1);i++)
+        for (int i = 0; i < (onsetDFBufferSize -1); i++)
         {
-            _onsetDF[i] = _onsetDF[i+1];
+            onsetDF[i] = onsetDF[i+1];
         }
 
         // add new sample at the end
-        _onsetDF[_onsetDFBufferSize-1] = (float) odfSample;
+        onsetDF[onsetDFBufferSize -1] = (float) odfSample;
         // update cumulative score
         updateCumulativeScore(odfSample);
 
-        //System.out.println("_latestCumulativeScoreValue=["+_latestCumulativeScoreValue+"]");
         // if we are halfway between beats
-        if (_m0 == 0)
+        if (m0 == 0)
         {
-            //System.out.println("predict beat");
             predictBeat();
-            /*//System.out.println("predictBeat() >>> _m0=["+_m0+"], _beatCounter=["+_beatCounter+"], _beatPeriod=["
-                    +_beatPeriod+"], _latestCumulativeScoreValue=["+_latestCumulativeScoreValue+"]");*/
         }
 
         // if we are at a beat
-        if (_beatCounter == 0)
+        if (beatCounter == 0)
         {
-            _beatDueInFrame = true;	// indicate a beat should be output
+            beatDueInFrame = true;	// indicate a beat should be output
 
             resampleOnsetDetectionFunction();
             // recalculate the tempo
@@ -176,34 +170,22 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
 
     private void resampleOnsetDetectionFunction() {
         float[] output = new float[512];
-        float[] input = new float[_onsetDFBufferSize];
+        float[] input = new float[onsetDFBufferSize];
 
-        for (int i = 0;i < _onsetDFBufferSize;i++)
+        for (int i = 0; i < onsetDFBufferSize; i++)
         {
-            input[i] = _onsetDF[i];
+            input[i] = onsetDF[i];
         }
 
-        double src_ratio = 512.0/((double) _onsetDFBufferSize); // 1
-        int BUFFER_LEN = _onsetDFBufferSize; // 512
-        int output_len;
-        //SRC_DATA	src_data ;
         Resampler resampler = new Resampler(true, 1, 200);
 
-        //output_len = (int) floor (((double) BUFFER_LEN) * src_ratio) ;
-        output_len = 512;
-
-        Resampler.Result result = resampler.process(1,input, 0, _onsetDFBufferSize, true, output,  0, output_len);
+        resampler.process(1,input, 0, onsetDFBufferSize, true, output,  0, 512);
 
 
         for ( int i = 0; i < output.length; i++) {
-            //System.out.println((round++) + " " + output[i]);
-            _resampledOnsetDF[i] = output[i];
+            resampledOnsetDetectionFunctionData[i] = output[i];
         }
     }
-
-/*    public double getSample(AudioEvent audioEvent) {
-        return _onsetDetector.onsetDetection(audioEvent);
-    }*/
 
     public void findOnsets(double onsetDetectionFunctionSample, long frame){
         // to ensure that the onset detection onset sample is positive
@@ -213,35 +195,33 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         // to zero. this is to avoid problems further down the line
         odfSample = odfSample + 0.0001;
 
-        _m0--;
-        _beatCounter--;
-        _beatDueInFrame = false;
+        m0--;
+        beatCounter--;
+        beatDueInFrame = false;
 
         // move all samples back one step
-        for (int i=0;i < (_onsetDFBufferSize-1);i++)
+        for (int i = 0; i < (onsetDFBufferSize -1); i++)
         {
-            _onsetDF[i] = _onsetDF[i+1];
+            onsetDF[i] = onsetDF[i+1];
         }
 
         // add new sample at the end
-        _onsetDF[_onsetDFBufferSize-1] = (float) odfSample;
+        onsetDF[onsetDFBufferSize -1] = (float) odfSample;
 
         // update cumulative score
         updateCumulativeScore(odfSample);
 
         // if we are halfway between beats
-        if (_m0 == 0)
+        if (m0 == 0)
         {
             predictBeat();
-            /*//System.out.println("predictBeat() >>> _m0=["+_m0+"], _beatCounter=["+_beatCounter+"], _beatPeriod=["
-                    +_beatPeriod+"], _latestCumulativeScoreValue=["+_latestCumulativeScoreValue+"]");*/
         }
 
         // if we are at a beat
-        if (_beatCounter == 0)
+        if (beatCounter == 0)
         {
-            _beatDueInFrame = true;	// indicate a beat should be output
-            _onsetHandler.handleOnset(getBeatTimeInSeconds(frame, _hopSize, (int) Shared.SAMPLE_RATE), _estimatedTempo);
+            beatDueInFrame = true;	// indicate a beat should be output
+            onsetHandler.handleOnset(getBeatTimeInSeconds(frame, hopSize, (int) Shared.SAMPLE_RATE), estimatedTempo);
             // recalculate the tempo
             calculateTempo();
         }
@@ -259,23 +239,23 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         float wcumscore;
 
         // two beat periods in the past
-        final int start = _onsetDFBufferSize - Math.round(2 * _beatPeriod);
+        final int start = onsetDFBufferSize - Math.round(2 * beatPeriod);
         // half a beat period in the past
-        final int end = _onsetDFBufferSize - Math.round(_beatPeriod / 2);
+        final int end = onsetDFBufferSize - Math.round(beatPeriod / 2);
         // interval in the past that is going to be searched
         final int winsize = end-start+1;
         final float[] window = new float[winsize];
         // most likely beat over the interval
         // allowed are vals in range of -|2*beatperiod| and -|beatperiod/2|
-        double mostLikelyBeat = -2 * _beatPeriod;
+        double mostLikelyBeat = -2 * beatPeriod;
 
         // create window
         for (int i = 0;i < winsize;i++)
         {
-            // to ensure that data exactly _beatPeriod samples in the past is preferred over other data,
+            // to ensure that data exactly beatPeriod samples in the past is preferred over other data,
             // a weighting factor (log Gaussian transition weighting) is introducedy
-            window[i] = (float) Math.exp((-1*Math.pow(_tightness * Math.log(-mostLikelyBeat/_beatPeriod), 2)) / 2);
-            //System.out.println("beatPeriod=[" +_beatPeriod + "],  window=[" + window[i]);
+            window[i] = (float) Math.exp((-1*Math.pow(tightness * Math.log(-mostLikelyBeat/ beatPeriod), 2)) / 2);
+
             mostLikelyBeat = mostLikelyBeat+1;
         }
 
@@ -284,10 +264,9 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         int n = 0;
         for (int i=start;i <= end;i++) {
             // calculate new cumulative score value (max) from cumulative score and weighting factor
-            wcumscore = _cumulativeScore[i] * window[n];
-            //System.out.println(wcumscore + ": " +_cumulativeScore[i] +" * " + window[n]);
+            wcumscore = cumulativeScore[i] * window[n];
+
             if (wcumscore > max) {
-                //System.out.println(max + " < " + wcumscore+ "(" +_cumulativeScore[i] +" * " + window[n]+")");
                 // replace max if new score bigger
                 max = wcumscore;
             }
@@ -295,18 +274,15 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         }
 
         // shift cumulative score back one
-        for (int i = 0;i < (_onsetDFBufferSize-1);i++) {
-            _cumulativeScore[i] = _cumulativeScore[i+1];
+        for (int i = 0; i < (onsetDFBufferSize -1); i++) {
+            cumulativeScore[i] = cumulativeScore[i+1];
         }
 
         /* set new score and apply weighting   */
         /* tightness of transition weighting window (default: 5)*/
         final float alpha = 0.9f;
         // add the new score at the end
-        _cumulativeScore[_onsetDFBufferSize-1] = (float) (((1 - alpha) * odfSample) + (alpha * max));
-        //System.out.println("(((1 - alpha) * odfSample) + (alpha * " + max + ")) = " +_cumulativeScore[_onsetDFBufferSize-1]);
-        // and set latestCumScoreVal to this value
-        float _latestCumulativeScoreValue = _cumulativeScore[_onsetDFBufferSize - 1];
+        cumulativeScore[onsetDFBufferSize -1] = (float) (((1 - alpha) * odfSample) + (alpha * max));
 
     }
 
@@ -315,32 +291,28 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
      */
     private void calculateTempo() {
         // adaptive threshold on input
-        adaptiveThreshold(_resampledOnsetDF,512);
+        adaptiveThreshold(resampledOnsetDetectionFunctionData,512);
 
         // calculate auto-correlation onset of detection onset
-        calculateBalancedACF(_resampledOnsetDF);
+        calculateBalancedACF(resampledOnsetDetectionFunctionData);
 
         // calculate output of comb filterbank
         calculateOutputOfCombFilterBank();
 
         // adaptive threshold on rcf
-        adaptiveThreshold(_combFilterBankOutput,128);
+        adaptiveThreshold(combFilterBankOutput,128);
 
 
-        int t_index;
-        int t_index2;
+        int index;
+        int index2;
         // calculate tempo observation vector from beat period observation vector
         for (int i = 0;i < 41;i++)
         {
-            double _tempoToLagFactor = 60. * (Shared.SAMPLE_RATE / (float) Shared.HOPSIZE);
-            t_index = (int) Math.round(_tempoToLagFactor / ((double) ((2*i)+80)));
-            t_index2 = (int) Math.round(_tempoToLagFactor / ((double) ((4*i)+160)));
+            double tempoToLagFactor = 60. * (Shared.SAMPLE_RATE / (float) Shared.HOPSIZE);
+            index = (int) Math.round(tempoToLagFactor / ((double) ((2*i)+80)));
+            index2 = (int) Math.round(tempoToLagFactor / ((double) ((4*i)+160)));
 
-
-            /*System.out.println("_tempoObservationVector[" + i+ ", "+t_index+", "+t_index2+"] = " +  _combFilterBankOutput[t_index-1] + " + "
-                    + _combFilterBankOutput[t_index2-1] + " = "
-                    + (_combFilterBankOutput[t_index-1] + _combFilterBankOutput[t_index2-1]));*/
-            _tempoObservationVector[i] = _combFilterBankOutput[t_index-1] + _combFilterBankOutput[t_index2-1];
+            tempoObservationVector[i] = combFilterBankOutput[index-1] + combFilterBankOutput[index2-1];
         }
 
 
@@ -349,12 +321,12 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         double curval;
 
         // if tempo is fixed then always use a fixed set of tempi as the previous observation probability onset
-        boolean _tempoFixed = false;
-        if (_tempoFixed)
+        boolean tempoFixed = false;
+        if (tempoFixed)
         {
             for (int k = 0;k < 41;k++)
             {
-                _prevDelta[k] = _prevDeltaFixed[k];
+                previousDeltas[k] = previousDeltasFixed[k];
             }
         }
 
@@ -363,7 +335,7 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
             maxval = -1;
             for (int i = 0;i < 41;i++)
             {
-                curval = _prevDelta[i]*_tempoTransitionMatrix[i][j];
+                curval = previousDeltas[i]* tempoTransitionMatrix[i][j];
 
                 if (curval > maxval)
                 {
@@ -371,32 +343,31 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
                 }
             }
 
-            _delta[j] = maxval*_tempoObservationVector[j];
+            deltas[j] = maxval* tempoObservationVector[j];
         }
 
 
-        normaliseArray(_delta,41);
+        normaliseArray(deltas,41);
 
         maxind = -1;
         maxval = -1;
 
         for (int j=0;j < 41;j++)
         {
-            if (_delta[j] > maxval)
+            if (deltas[j] > maxval)
             {
-                maxval = _delta[j];
+                maxval = deltas[j];
                 maxind = j;
             }
 
-            _prevDelta[j] = _delta[j];
+            previousDeltas[j] = deltas[j];
         }
 
-        _beatPeriod = Math.round((60.0*Shared.SAMPLE_RATE)/(((2*maxind)+80)*((double) _hopSize)));
-        //System.out.println("beatPeriod=["+ _beatPeriod +"], maxind=[" + maxind + "]");
+        beatPeriod = Math.round((60.0*Shared.SAMPLE_RATE)/(((2*maxind)+80)*((double) hopSize)));
 
-        if (_beatPeriod > 0)
+        if (beatPeriod > 0)
         {
-            _estimatedTempo = 60.0/((((double) _hopSize) / Shared.SAMPLE_RATE)*_beatPeriod);
+            estimatedTempo = 60.0/((((double) hopSize) / Shared.SAMPLE_RATE)* beatPeriod);
         }
     }
 
@@ -407,7 +378,6 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         {
             if (array[i] > 0)
             {
-                //System.out.println("sum = " + sum + " + " + array[i] +" = " + (sum + array[i]));
                 sum = sum + array[i];
             }
         }
@@ -426,7 +396,7 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         int numelem = 4;
 
         for (int i = 0;i < 128;i++) {
-            _combFilterBankOutput[i] = 0;
+            combFilterBankOutput[i] = 0;
         }
 
 
@@ -436,19 +406,18 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
             {
                 for (int b = 1-a;b <= a-1;b++) // general state using normalisation of comb elements
                 {
-                    /*System.out.println("_combFilterBankOutput[" + (i-1) + "] = " + _combFilterBankOutput[i-1]
-                            + " + (" + _acf[(a*i+b)-1] + " * " + _weightingVector[i-1] + ") / " + (2*a-1)
-                            + " = " + (_combFilterBankOutput[i-1] + (_acf[(a*i+b)-1]*_weightingVector[i-1])/(2*a-1)));*/
                     // calculate value for comb filter row
-                    _combFilterBankOutput[i-1] = _combFilterBankOutput[i-1] + (_acf[(a*i+b)-1]*_weightingVector[i-1])/(2*a-1);
+                    combFilterBankOutput[i-1] = combFilterBankOutput[i-1] + (acf[(a*i+b)-1]* weightingVector[i-1])/(2*a-1);
                 }
             }
         }
     }
 
     private void calculateBalancedACF(double[] onsetDF) {
-        int l, n;
-        double sum, tmp;
+        int l;
+        int n;
+        double sum;
+        double tmp;
 
 
         // for l lags from 0-511
@@ -463,46 +432,45 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
                 sum = sum + tmp;	// add to sum
             }
 
-            _acf[l] = sum / (512-l);		// weight by number of mults and add to acf buffer
-            //System.out.println("_acf[" + l + "] = " + sum + " / " + (512-l) + " = " + _acf[l]);
+            acf[l] = sum / (512-l);		// weight by number of mults and add to acf buffer
         }
     }
 
     private void adaptiveThreshold(double[] onsetDF, int dfSize) {
-        int i, k, t;
-        double[] x_thresh = new double[dfSize];
+        int i;
+        int k;
+        int t;
 
-        int p_post = 7;
-        int p_pre = 8;
+        double[] thresholds = new double[dfSize];
 
-        //System.out.println(Arrays.toString(onsetDF));
+        int post = 7;
+        int pre = 8;
 
-        t = Math.min(dfSize,p_post);	// what is smaller, p_post or df size. This is to avoid accessing outside of arrays
+        t = Math.min(dfSize,post);	// what is smaller, post or df size. This is to avoid accessing outside of arrays
 
         // find threshold for first 't' samples, where a full average cannot be computed yet
         for (i = 0;i <= t;i++)
         {
-            k = Math.min((i+p_pre),dfSize);
-            x_thresh[i] = calculateMeanOfArray(onsetDF,1,k);
+            k = Math.min(i+pre,dfSize);
+            thresholds[i] = calculateMeanOfArray(onsetDF,1,k);
         }
-        // find threshold for bulk of samples across a moving average from [i-p_pre,i+p_post]
-        for (i = t+1;i < dfSize-p_post;i++)
+        // find threshold for bulk of samples across a moving average from [i-pre,i+post]
+        for (i = t+1;i < dfSize-post;i++)
         {
             // use Mean from apache commons-math?
-            x_thresh[i] = calculateMeanOfArray(onsetDF,i-p_pre,i+p_post);
+            thresholds[i] = calculateMeanOfArray(onsetDF,i-pre,i+post);
         }
         // for last few samples calculate threshold, again, not enough samples to do as above
-        for (i = dfSize-p_post;i < dfSize;i++)
+        for (i = dfSize-post;i < dfSize;i++)
         {
-            k = Math.max((i-p_post),1);
-            x_thresh[i] = calculateMeanOfArray(onsetDF,k,dfSize);
+            k = Math.max(i-post,1);
+            thresholds[i] = calculateMeanOfArray(onsetDF,k,dfSize);
         }
 
         // subtract the threshold from the detection onset and check that it is not less than 0
         for (i = 0;i < dfSize;i++)
         {
-            //System.out.println("onsetDF[" + i + "] = " + onsetDF[i]+ " - " + x_thresh[i] + "  = " + (onsetDF[i] - x_thresh[i]));
-            onsetDF[i] = onsetDF[i] - x_thresh[i];
+            onsetDF[i] = onsetDF[i] - thresholds[i];
             if (onsetDF[i] < 0)
             {
                 onsetDF[i] = 0;
@@ -534,35 +502,33 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
     }
 
     private void predictBeat() {
-        int windowSize = (int) _beatPeriod;
-        double[] futureCumulativeScore = new double[_onsetDFBufferSize + windowSize];
+        int windowSize = (int) beatPeriod;
+        double[] futureCumulativeScore = new double[onsetDFBufferSize + windowSize];
         double[] futureWindow = new double[windowSize];
         // copy cumscore to first part of fcumscore
-        for (int i = 0;i < _onsetDFBufferSize;i++)
+        for (int i = 0; i < onsetDFBufferSize; i++)
         {
-            futureCumulativeScore[i] = _cumulativeScore[i];
+            futureCumulativeScore[i] = cumulativeScore[i];
         }
 
         // create future window
         double v = 1;
         for (int i = 0;i < windowSize;i++)
         {
-            futureWindow[i] = Math.exp((-1*Math.pow((v - (_beatPeriod/2)),2))   /  (2*Math.pow((_beatPeriod/2) ,2)));
-            //System.out.println("futureWindow[" + i + "] = " + futureWindow[i] + ", beatPeriod=["+ _beatPeriod +"]");
+            futureWindow[i] = Math.exp((-1*Math.pow(v - (beatPeriod /2),2))   /  (2*Math.pow(beatPeriod /2 ,2)));
             v++;
         }
 
         // create past window
-        v = -2*_beatPeriod;
-        int start = _onsetDFBufferSize - Math.round(2*_beatPeriod);
-        int end = _onsetDFBufferSize - Math.round(_beatPeriod/2);
+        v = -2* beatPeriod;
+        int start = onsetDFBufferSize - Math.round(2* beatPeriod);
+        int end = onsetDFBufferSize - Math.round(beatPeriod /2);
         int pastwinsize = end-start+1;
         double[] pastWindow = new double[pastwinsize];
 
         for (int i = 0;i < pastwinsize;i++)
         {
-            pastWindow[i] = Math.exp((-1*Math.pow(_tightness*Math.log(-v/_beatPeriod),2))/2);
-            //System.out.println("pastWindow["+ i + "]" + pastWindow[i]);
+            pastWindow[i] = Math.exp((-1*Math.pow(tightness *Math.log(-v/ beatPeriod),2))/2);
             v = v+1;
         }
 
@@ -572,10 +538,10 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         double max;
         int n;
         double wcumscore;
-        for (int i = _onsetDFBufferSize;i < (_onsetDFBufferSize+windowSize);i++)
+        for (int i = onsetDFBufferSize; i < (onsetDFBufferSize +windowSize); i++)
         {
-            start = i - Math.round(2*_beatPeriod);
-            end = i - Math.round(_beatPeriod/2);
+            start = i - Math.round(2* beatPeriod);
+            end = i - Math.round(beatPeriod /2);
 
             max = 0;
             n = 0;
@@ -598,37 +564,37 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         max = 0;
         n = 0;
 
-        for (int i = _onsetDFBufferSize;i < (_onsetDFBufferSize+windowSize);i++)
+        for (int i = onsetDFBufferSize; i < (onsetDFBufferSize +windowSize); i++)
         {
             wcumscore = futureCumulativeScore[i]*futureWindow[n];
 
             if (wcumscore > max)
             {
                 max = wcumscore;
-                _beatCounter = n;
+                beatCounter = n;
             }
 
             n++;
         }
         // set next prediction time
-        _m0 = _beatCounter+Math.round(_beatPeriod/2.0f);
+        m0 = beatCounter +Math.round(beatPeriod /2.0f);
 
     }
 
     @Override
     public boolean isBeatDueInFrame() {
-        return _beatDueInFrame;
+        return beatDueInFrame;
     }
 
 
 
     @Override
     public void setHandler(OnsetHandler handler) {
-        _onsetHandler = handler;
+        onsetHandler = handler;
     }
 
     public double getBeatTimeInSeconds(long frameNumber,int hopSize, int samplingFrequency) {
-        return (((double) hopSize / (double) samplingFrequency) * (double) frameNumber);
+        return ((double) hopSize / (double) samplingFrequency) * (double) frameNumber;
     }
 
 }
