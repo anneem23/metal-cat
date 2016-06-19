@@ -7,16 +7,16 @@ import java.nio.ShortBuffer;
 
 public class AudioSampleConverter {
 
-    private final AudioFormat _audioFormat;
+    private final AudioFormat audioFormat;
 
     public AudioSampleConverter(AudioFormat audioFormat) {
-        _audioFormat = audioFormat;
+        this.audioFormat = audioFormat;
     }
 
     // Return the number of samples of all channels
     public long getSampleCount(long frameLength) {
-        long total = (frameLength * _audioFormat.getFrameSize() * 8) / _audioFormat.getSampleSizeInBits();
-        return total / _audioFormat.getChannels();
+        long total = (frameLength * audioFormat.getFrameSize() * 8) / audioFormat.getSampleSizeInBits();
+        return total / audioFormat.getChannels();
     }
 
     public double[] convert(byte[] abAudioData) {
