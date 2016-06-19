@@ -5,8 +5,8 @@ import org.anneem23.metal.cat.audio.Shared;
 import javax.sound.sampled.*;
 import java.io.File;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
-import java.util.Vector;
 
 import static javax.sound.sampled.AudioSystem.getMixer;
 
@@ -53,7 +53,7 @@ public class MicrophoneRecorder {
         final Scanner scan=new Scanner(System.in);
         System.out.println("Select a microphone from the list below: ");
 
-        final Vector<Mixer.Info> infoVector = Shared.getMixerInfo(false, true);
+        final List<Mixer.Info> infoVector = Shared.getMixerInfo(false, true);
         for (int i = 0; i < infoVector.size(); i++) {
             Mixer.Info info = infoVector.get(i);
             System.out.println(i + ": " + info.getName());

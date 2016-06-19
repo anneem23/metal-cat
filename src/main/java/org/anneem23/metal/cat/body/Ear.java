@@ -1,8 +1,9 @@
 package org.anneem23.metal.cat.body;
 
-import org.anneem23.metal.cat.audio.*;
+import org.anneem23.metal.cat.audio.AudioDispatcher;
+import org.anneem23.metal.cat.audio.AudioInputStreamProcessor;
+import org.anneem23.metal.cat.audio.AudioProcessor;
 
-import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.IOException;
@@ -18,33 +19,32 @@ import java.util.concurrent.Executors;
  */
 public class Ear {
 
-    private static final AudioFormat AUDIO_FORMAT = new AudioFormat(Shared.SAMPLE_RATE, 16, 1, true, false);
+    private final ExecutorService executorService;
 
-    private final ExecutorService _executorService;
-
-    private final AudioDispatcher _dispatcher;
+    private final AudioDispatcher audioDispatcher;
 
     public Ear(AudioDispatcher dispatcher) {
-        _dispatcher = dispatcher;
-        _executorService = Executors.newFixedThreadPool(10);
+        audioDispatcher = dispatcher;
+        executorService = Executors.newFixedThreadPool(10);
     }
 
     public Ear(String filename) throws IOException, UnsupportedAudioFileException {
-        _executorService = Executors.newFixedThreadPool(10);
+        executorService = Executors.newFixedThreadPool(10);
         AudioProcessor streamProcessor = new AudioInputStreamProcessor(new File(filename));
-        _dispatcher = new AudioDispatcher(streamProcessor);
+        audioDispatcher = new AudioDispatcher(streamProcessor);
     }
 
 
     public AudioDispatcher getDispatcher() {
-        return _dispatcher;
+        return audioDispatcher;
     }
 
 
     public void listen() throws IOException, UnsupportedAudioFileException {
-        _executorService.execute(new Runnable() {
+        executorService.execute(new Runnable() {
+            @Override
             public void run() {
-                _dispatcher.run();
+                audioDispatcher.run();
             }
         });
     }

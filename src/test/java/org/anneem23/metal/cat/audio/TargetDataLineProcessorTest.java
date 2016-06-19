@@ -4,8 +4,7 @@ import org.junit.Test;
 
 import javax.sound.sampled.*;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Vector;
+import java.util.List;
 
 import static javax.sound.sampled.AudioSystem.getMixer;
 import static org.hamcrest.Matchers.is;
@@ -34,7 +33,7 @@ public class TargetDataLineProcessorTest {
     }
 
     private void givenMicrophoneInput() throws LineUnavailableException {
-        final Vector<Mixer.Info> infos = Shared.getMixerInfo(false, true);
+        final List<Mixer.Info> infos = Shared.getMixerInfo(false, true);
         Mixer.Info info = infos.get(1);
 
         DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class, Shared.AUDIO_FORMAT);

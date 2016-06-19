@@ -4,7 +4,7 @@ import org.junit.Test;
 
 import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.arrayWithSize;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 public class FFTTest {
 

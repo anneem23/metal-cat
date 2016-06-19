@@ -5,21 +5,16 @@ import org.anneem23.metal.cat.audio.TargetDataLineProcessor;
 
 import javax.sound.sampled.*;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
-import java.util.Vector;
 
 import static javax.sound.sampled.AudioSystem.getMixer;
 
 /**
- * AudioInputPrinter Model Object.
- * <p>
- * <P>Various attributes of guitars, and related behaviour.
- * <p>
- * <P>Note that {@link BigDecimal} is used to model the price - not double or float.
- * See {@link #AudioInputPrinter(String, BigDecimal, Integer)} for more information.
+ * Tool that outputs incoming audio data from the selected
+ * audio input source to the command line
  *
  * @author anneem23
- * @version 2.0
  */
 public class AudioInputPrinter {
 
@@ -57,7 +52,7 @@ public class AudioInputPrinter {
         final Scanner scan=new Scanner(System.in);
         System.out.println("Select a microphone from the list below: ");
 
-        final Vector<Mixer.Info> infoVector = Shared.getMixerInfo(false, true);
+        final List<Mixer.Info> infoVector = Shared.getMixerInfo(false, true);
         for (int i = 0; i < infoVector.size(); i++) {
             Mixer.Info info = infoVector.get(i);
             System.out.println(i + ": " + info.getName());
@@ -69,14 +64,12 @@ public class AudioInputPrinter {
 
         try (Mixer mixer = getMixer(infoVector.get(scan.nextInt()))) {
 
-            try {
                 if (mixer.isLineSupported(targetInfo)) {
                     TargetDataLine targetLine = (TargetDataLine) mixer.getLine(targetInfo);
                     TargetDataLineProcessor processor = new TargetDataLineProcessor(targetLine);
                     processor.openStream();
 
 
-                    int numBytesRead;
                     byte[] targetData = new byte[Shared.FRAME_SIZE];
 
                     System.out.println("Start audio ...");
@@ -95,13 +88,10 @@ public class AudioInputPrinter {
                     System.out.println(mixer.getLineInfo());
 
                 }
-            }
-            catch (Exception e) {
-                System.err.println(e);
-            }
+
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println(e);
         }
 
 

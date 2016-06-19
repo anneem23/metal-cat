@@ -1,6 +1,8 @@
 package org.anneem23.metal.cat.audio;
 
-import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -11,36 +13,38 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class AudioDispatcher implements Runnable {
 
-    private final CopyOnWriteArrayList<AudioSampleListener> _listeners = new CopyOnWriteArrayList();
-    private final AudioProcessor _audioProcessor;
+    private static final Logger LOGGER = LoggerFactory.getLogger(AudioDispatcher.class);
+
+    private final CopyOnWriteArrayList<AudioSampleListener> listeners = new CopyOnWriteArrayList();
+    private final AudioProcessor audioProcessor;
 
     public AudioDispatcher(AudioProcessor audioProcessor) {
-        _audioProcessor = audioProcessor;
+        this.audioProcessor = audioProcessor;
     }
 
 
     public void register(AudioSampleListener listener) {
-        _listeners.add(listener);
+        listeners.add(listener);
     }
 
     @Override
     public void run() {
-        final AudioSampleConverter sampleConverter = new AudioSampleConverter(_audioProcessor.getFormat());
+        final AudioSampleConverter sampleConverter = new AudioSampleConverter(audioProcessor.getFormat());
 
         try {
-            _audioProcessor.openStream();
-            while (_audioProcessor.bytesAvailable()) {
-                byte[] audioData = _audioProcessor.readBytes(Shared.FRAME_SIZE);
+            audioProcessor.openStream();
+            while (audioProcessor.bytesAvailable()) {
+                byte[] audioData = audioProcessor.readBytes(Shared.FRAME_SIZE);
 
                 dispatch(sampleConverter.convert(audioData));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Failed to read audio stream.", e);
         }
     }
 
     private void dispatch(double[] audioSamples) {
-        for (AudioSampleListener listener : _listeners)
+        for (AudioSampleListener listener : listeners)
             listener.updateSamples(audioSamples);
     }
 }

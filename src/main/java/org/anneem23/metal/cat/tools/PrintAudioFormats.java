@@ -49,17 +49,17 @@ public class PrintAudioFormats {
 
           Map<String,Object> prop = format.properties();
           if(!prop.isEmpty()) {
-              //System.out.println("      Properties: ");
+              System.out.println("      Properties: ");
               for(Map.Entry<String, Object> entry : prop.entrySet()) {
                   System.out.printf("      %s: \t%s\n", entry.getKey(), entry.getValue());
               }
           }
                 }
-                //System.out.println();
+                System.out.println();
             } else {
-                //System.out.println(info.toString());
+                System.out.println(info.toString());
             }
-            //System.out.println();
+            System.out.println();
         }
 
         mixer.close();
