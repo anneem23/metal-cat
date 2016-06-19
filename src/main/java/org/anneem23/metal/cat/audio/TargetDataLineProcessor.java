@@ -11,34 +11,34 @@ import java.io.IOException;
  */
 public class TargetDataLineProcessor implements AudioProcessor {
 
-    private final TargetDataLine _line;
-    private int _bytesRead;
+    private final TargetDataLine dataLine;
+    private int bytesRead;
 
     public TargetDataLineProcessor(TargetDataLine targetLine) {
-        this._line = targetLine;
+        this.dataLine = targetLine;
     }
 
     @Override
     public void openStream() throws Exception {
-        _line.open(new AudioFormat(48000, 16, 1, true, false));
-        _line.start();
+        dataLine.open(new AudioFormat(48000, 16, 1, true, false));
+        dataLine.start();
     }
 
     @Override
     public byte[] readBytes(int bytes) throws IOException {
         byte[] targetData = new byte[Shared.FRAME_SIZE];
-        _bytesRead = _line.read(targetData, 0, targetData.length);
+        bytesRead = dataLine.read(targetData, 0, targetData.length);
 
         return targetData;
     }
 
     @Override
     public boolean bytesAvailable() {
-        return _bytesRead != -1;
+        return bytesRead != -1;
     }
 
     @Override
     public AudioFormat getFormat() {
-        return _line.getFormat();
+        return dataLine.getFormat();
     }
 }
