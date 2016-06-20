@@ -12,7 +12,7 @@ import java.util.Map;
  * @author anneem23
  * @version 2.0
  */
-public class PrintAudioFormats {
+class PrintAudioFormats {
 
     public static void main(String[] args) {
         for (Mixer.Info info : Shared.getMixerInfo(false, true)) {

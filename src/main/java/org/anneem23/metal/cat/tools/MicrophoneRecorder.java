@@ -1,6 +1,8 @@
 package org.anneem23.metal.cat.tools;
 
 import org.anneem23.metal.cat.audio.Shared;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sound.sampled.*;
 import java.io.File;
@@ -10,15 +12,15 @@ import java.util.Scanner;
 
 import static javax.sound.sampled.AudioSystem.getMixer;
 
-public class MicrophoneRecorder {
+class MicrophoneRecorder {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(MicrophoneRecorder.class);
     // path of the wav file
-
-    public static final File wavFile = new File("/tmp/recording.wav");
+    private static final File wavFile = new File("/tmp/recording.wav");
 
     // format of audio file
 
-    public static final AudioFileFormat.Type fileType = AudioFileFormat.Type.WAVE;
+    private static final AudioFileFormat.Type fileType = AudioFileFormat.Type.WAVE;
 
     public static void main(String[] args) throws LineUnavailableException {
         AudioFormat format = new AudioFormat(48000, 16, 1, true, false);
@@ -65,15 +67,10 @@ public class MicrophoneRecorder {
 
         try (Mixer mixer = getMixer(infoVector.get(scan.nextInt()))) {
 
-            try {
                 if (mixer.isLineSupported(targetInfo)) {
                     TargetDataLine targetLine = (TargetDataLine) mixer.getLine(targetInfo);
                     targetLine.open(format);
                     targetLine.start();
-
-
-                    int numBytesRead;
-                    byte[] targetData = new byte[targetLine.getBufferSize() / 5];
 
                     AudioInputStream ais = new AudioInputStream(targetLine);
                     System.out.println("Start recording...");
@@ -87,13 +84,10 @@ public class MicrophoneRecorder {
                     System.out.println(mixer.getLineInfo());
 
                 }
-            }
-            catch (Exception e) {
-                System.err.println(e);
-            }
+
 
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Cannot open Mixer.", e);
         }
 
 

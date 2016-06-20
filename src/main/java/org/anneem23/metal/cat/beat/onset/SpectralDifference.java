@@ -9,7 +9,7 @@ import be.tarsos.dsp.util.fft.HammingWindow;
  * @author anneem23
  * @version 2.0
  */
-public class SpectralDifference extends AbstractOnsetDetectionFunction {
+class SpectralDifference extends AbstractOnsetDetectionFunction {
 
 
     public SpectralDifference(int frameSize, int hopSize) {

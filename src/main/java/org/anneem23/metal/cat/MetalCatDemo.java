@@ -14,7 +14,7 @@ import static org.anneem23.metal.cat.audio.Shared.getMixerInfo;
  *
  * @author anneem23
  */
-public class MetalCatDemo {
+class MetalCatDemo {
 
     private static final AudioFormat AUDIO_FORMAT = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
     private static final DataLine.Info DATA_LINE_INFO = new DataLine.Info(TargetDataLine.class, AUDIO_FORMAT);

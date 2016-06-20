@@ -5,7 +5,6 @@ import org.anneem23.metal.cat.audio.TargetDataLineProcessor;
 import org.anneem23.metal.cat.body.Arm;
 import org.anneem23.metal.cat.body.Brain;
 import org.anneem23.metal.cat.body.Ear;
-import org.seamless.xhtml.Meta;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +20,7 @@ import java.io.IOException;
  *
  * @author anneem23
  */
-public class MetalCat {
+class MetalCat {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MetalCat.class);
 
@@ -44,7 +43,7 @@ public class MetalCat {
 
 
 
-    public MetalCat(String fileName) throws IOException, UnsupportedAudioFileException {
+    private MetalCat(String fileName) throws IOException, UnsupportedAudioFileException {
         LOGGER.info("Creating metal cat:");
         this.arm = null;
         LOGGER.info("\tArm added!");

@@ -6,7 +6,7 @@ package org.anneem23.metal.cat.body;
  * @author anneem23
  * @version 2.0
  */
-public interface Moveable {
+interface Moveable {
     void updateBpm(double bpm);
     void dance() throws InterruptedException;
     boolean isDancing();

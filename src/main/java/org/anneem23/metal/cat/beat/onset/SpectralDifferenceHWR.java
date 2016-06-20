@@ -2,7 +2,7 @@ package org.anneem23.metal.cat.beat.onset;
 
 import be.tarsos.dsp.AudioEvent;
 
-public class SpectralDifferenceHWR extends AbstractOnsetDetectionFunction {
+class SpectralDifferenceHWR extends AbstractOnsetDetectionFunction {
 
 
     public SpectralDifferenceHWR(int frameSize, int hopSize) {
