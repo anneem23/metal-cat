@@ -67,26 +67,28 @@ public class TempoEstimation {
             this.weightingVector[n] = (float) weightingFactor(rayparam, n);
         }
 
-        // initialise prev_delta
+        // We enforce some dependence on consecutive tempo estimates
+        // by finding the current tempo tb based on the previous estimate
+        // tb−1
         this.previousDeltas = new double[41];
         for (int i = 0;i < 41;i++) {
             this.previousDeltas[i] = 1;
         }
 
 
-        // create tempo transition matrix
+        // create tempo transition matrix tempoTransitionMatrix(ti, tj) where each column is a Gaussian
+        // of fixed standard deviation σ = (tmax − tmin)/8 and ti, tj = 1, . . . ,(tmax − tmin).
         this.tempoTransitionMatrix = new double[41][41];
         for (int i = 0;i < 41;i++) {
             for (int j = 0;j < 41;j++) {
                 double x = (double) j + 1;
                 double tMu = (double) i + 1;
-                double mSig = (double) 41 / 8;
-                tempoTransitionMatrix[i][j] = (1 / (mSig * Math.sqrt(2*Math.PI))) * Math.exp( (-1*Math.pow(x- tMu,2)) / (2*Math.pow(mSig,2)) );
+                // standard deviation σ = (tmax − tmin)/8
+                double fixedStandardDerivation = (double) 41 / 8;
+                tempoTransitionMatrix[i][j] = (1 / (fixedStandardDerivation * Math.sqrt(2*Math.PI))) * gaussian(x, tMu, fixedStandardDerivation);
             }
         }
     }
-
-
 
     public double tempo() {
         return estimatedTempo;
@@ -96,6 +98,10 @@ public class TempoEstimation {
      * Tempo estimation (and hence beat period τb) is based on components from
      * the two state model of Davies and Plumbley.
      *
+     * To minimise the common beat tracking error of switching between
+     * metrical levels we restrict the range of tempi to one tempo octave from
+     * 80 beats per minute (bpm) to 160 bpm.
+     *
      * The method can be summarised in the following five steps:
      *     i) we extract a six second analysis frame (up to m0 from (4)) from
      *     the onset detection function Γ(m);
@@ -104,9 +110,9 @@ public class TempoEstimation {
      *     applying an adaptive moving mean threshold to leave a modified detection
      *     function Γ( ˜ m);
      *
-     *     iii) we take the autocorrelation function of Γ( ˜ m);
+     *     iii) we take the auto-correlation function of Γ( ˜ m);
      *
-     *     iv) we pass the autocorrelation function through a shift-invariant comb
+     *     iv) we pass the auto-correlation function through a shift-invariant comb
      *     filterbank weighted by a tempo preference curve;
      *
      *     and v) we find the beat period as in the index of the maximum value of the
@@ -120,10 +126,10 @@ public class TempoEstimation {
         double[] adaptiveThreshold = adaptiveThreshold(data, 512);
 
         // calculate auto-correlation onset of detection onset (III)
-        double[] balancedACF = calculateBalancedACF(adaptiveThreshold);
+        double[] balancedAutoCorrelationFunction = calculateBalancedAutoCorrelationFunction(adaptiveThreshold);
 
         // calculate output of comb filterbank (IV)
-        double[] combFilterBankOutput = calculateOutputOfCombFilterBank(balancedACF);
+        double[] combFilterBankOutput = calculateOutputOfCombFilterBank(balancedAutoCorrelationFunction);
 
         // adaptive threshold on rcf
         combFilterBankOutput = adaptiveThreshold(combFilterBankOutput,128);
@@ -131,61 +137,73 @@ public class TempoEstimation {
         // calculate tempo observation vector from beat period observation vector (V)
         // we track beats in the range of 80 - 160 bpm
         for (int i = 0;i < 41;i++) {
-            double tempoToLagFactor = 60. * (Shared.SAMPLE_RATE / (float) Shared.HOPSIZE);
+            // the temporal resolution of the onset detection function in seconds
+            double tempoToLagFactor = 60. * (Shared.SAMPLE_RATE / (float) Shared.HOP_SIZE);
+            // lower bounds at 80 bpm
             int index = (int) Math.round(tempoToLagFactor / ((double) ((2*i)+ MIN_BPM)));
+            // upper bounds at 160 bpm
             int index2 = (int) Math.round(tempoToLagFactor / ((double) ((4*i)+ MAX_BPM)));
 
             tempoObservationVector[i] = combFilterBankOutput[index-1] + combFilterBankOutput[index2-1];
         }
 
-
+        // At each new iteration, we store the maximum value of the
+        // product of each column of tempoTransitionMatrix with the
+        // stored state probabilities previousDeltas from the
+        // previous iteration
         for (int j=0;j < 41;j++) {
             double maxval = -1;
             for (int i = 0;i < 41;i++) {
-                double curval = previousDeltas[i]* tempoTransitionMatrix[i][j];
+                double curval = previousDeltas[i] * tempoTransitionMatrix[i][j];
                 if (curval > maxval) {
                     maxval = curval;
                 }
             }
-            deltas[j] = maxval* tempoObservationVector[j];
+            // Update delta[i] to reflect the tempo range comb filter output
+            // for the current beat frame tempoObservationVector[j] by taking
+            // the element-wise product of the two signals
+            deltas[j] = maxval * tempoObservationVector[j];
         }
 
+        // To prevent deltas from growing exponentially or approaching zero at each
+        // iteration we normalise it to sum to unity
+        normaliseArray(deltas, 41);
 
-        normaliseArray(deltas,41);
 
-        double maxind = -1;
-        double maxval = -1;
+        // We then find the current tempo beatPeriod as the index of the maximum value
+        // of deltas - maxIdx
+        double maxIdx = -1;
+        double maxVal = -1;
 
-        for (int j=0;j < 41;j++)
-        {
-            if (deltas[j] > maxval)
-            {
-                maxval = deltas[j];
-                maxind = j;
+        for (int j=0;j < 41;j++) {
+            if (deltas[j] > maxVal) {
+                maxVal = deltas[j];
+                maxIdx = j;
             }
-
             previousDeltas[j] = deltas[j];
         }
 
-        beatPeriod = Math.round((60.0*Shared.SAMPLE_RATE)/(((2*maxind)+ MIN_BPM)*((double) hopSize)));
+        // why this? round((60.0*44100.0)/(((2*maxind)+80)*((double) hopSize)));
+        beatPeriod = Math.round((60.0 * Shared.SAMPLE_RATE) / (((2 * maxIdx) + MIN_BPM) * ((double) hopSize)));
 
         if (beatPeriod > 0) {
-            estimatedTempo = 60.0/((((double) hopSize) / Shared.SAMPLE_RATE)* beatPeriod);
+            // estimatedTempo = | 60.0 / (0.01161 * t) |
+            estimatedTempo = 60.0 / ((((double) hopSize) / Shared.SAMPLE_RATE) * beatPeriod);
         }
     }
 
 
     /**
-     * Auto-correlation function of Γ( ˜ m)
+     * Auto-correlation function of modified detection function
      *
      * Adds balance between existing and past data in cumulative score (default: 0.9)
      *
-     * @param onsetDF Γ( ˜ m)
-     * @return auto-correlation function of Γ( ˜ m)
+     * @param onsetDF modified detection function
+     * @return auto-correlation function of modified detection function
      */
-    private double[] calculateBalancedACF(double[] onsetDF) {
+    private double[] calculateBalancedAutoCorrelationFunction(double[] onsetDF) {
         //
-        double[] acf = new double[hopSize];
+        double[] autoCorrelationFunction = new double[hopSize];
 
         // for l lags from 0-511
         for (int l = 0;l < 512;l++) {
@@ -195,20 +213,20 @@ public class TempoEstimation {
                 // multiply current sample n by sample (n+l) and add it to sum
                 sum += (onsetDF[n] * onsetDF[n+l]);
             }
-            // weight by number of mults and add to acf buffer
-            acf[l] = sum / (512-l);
+            // weight by number of mults and add to autoCorrelationFunction buffer
+            autoCorrelationFunction[l] = sum / (512-l);
         }
 
-        return acf;
+        return autoCorrelationFunction;
     }
 
     /**
      * Preserve the peaks in onsetDF by applying an adaptive moving mean threshold to leave a modified detection
-     * function Γ( ˜ m)
+     * function modified detection function
      *
      * @param onsetDF onset detection function data
      * @param dfSize size of onsetDF
-     * @return modified detection function Γ( ˜ m)
+     * @return modified detection function of modified detection function??
      */
     private double[] adaptiveThreshold(double[] onsetDF, int dfSize) {
         double[] thresholds = new double[dfSize];
@@ -247,11 +265,15 @@ public class TempoEstimation {
     }
 
     /**
+     * Returns arithmetic mean of array, the sum of the values divided by the
+     * number of items in the array
      *
-     * @param array
-     * @param startIndex
-     * @param endIndex
-     * @return
+     *  (array[startIndex]+array[startIndex+1]+...+array[endIndex]) / (endIndex - startIndex)
+     *
+     * @param array input values
+     * @param startIndex start index
+     * @param endIndex end index
+     * @return arithmetic mean of all values from startIndex to endIndex
      */
     private double calculateMeanOfArray(double[] array, int startIndex, int endIndex) {
         if (startIndex >= endIndex) {
@@ -320,12 +342,19 @@ public class TempoEstimation {
 
 
     /**
+     * weighting factor utility method to create rayleigh weighting vector
      *
      * @param rayparam
      * @param n
      * @return
      */
-    private static double weightingFactor(double rayparam, int n) {
-        return ((double) n / Math.pow(rayparam,2)) * Math.exp((-1*Math.pow((double)-n,2)) / (2*Math.pow(rayparam,2)));
+    private static double weightingFactor(double rayparam, double n) {
+        // (n / rayparam^2) * exp(( -1 * -n^2) / (2 * rayparam^2))
+        // (n / rayparam^2) * gaussian(n, rayparam)?
+        return (n / Math.pow(rayparam, 2)) * Math.exp((-1 * Math.pow(-n, 2)) / (2 * Math.pow(rayparam, 2)));
+    }
+
+    private static double gaussian(double ti, double tj, double omega) {
+        return Math.exp( (-1*Math.pow(ti- tj,2)) / (2*Math.pow(omega,2)));
     }
 }

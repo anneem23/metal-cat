@@ -29,7 +29,7 @@ public class Brain implements AudioSampleListener {
     }
 
     public Brain() throws IOException {
-        this(new BeatTracker(Shared.HOPSIZE, new ComplexSpectralDifference(Shared.FRAME_SIZE, Shared.HOPSIZE), Shared.SAMPLE_RATE));
+        this(new BeatTracker(Shared.HOP_SIZE, new ComplexSpectralDifference(Shared.FRAME_SIZE, Shared.HOP_SIZE), Shared.SAMPLE_RATE));
     }
 
 
@@ -39,14 +39,14 @@ public class Brain implements AudioSampleListener {
 
     @Override
     public void updateSamples(double[] audioData) {
-        double[] buffer = new double[Shared.HOPSIZE];	// buffer to hold one Shared.HOPSIZE worth of audio samples
+        double[] buffer = new double[Shared.HOP_SIZE];	// buffer to hold one Shared.HOP_SIZE worth of audio samples
 
         // get number of audio frames, given the hop size and signal length
-        double numFrames = (int) Math.floor(((double) audioData.length) / ((double) Shared.HOPSIZE));
+        double numFrames = (int) Math.floor(((double) audioData.length) / ((double) Shared.HOP_SIZE));
 
         for (int i=0;i < numFrames;i++) {
             // add new samples to frame
-            System.arraycopy(audioData, (i * Shared.HOPSIZE) + 0, buffer, 0, Shared.HOPSIZE);
+            System.arraycopy(audioData, (i * Shared.HOP_SIZE) + 0, buffer, 0, Shared.HOP_SIZE);
 
             beatTrackingAlgorithm.processAudioFrame(buffer);
             if (beatTrackingAlgorithm.isBeatDueInFrame()) {

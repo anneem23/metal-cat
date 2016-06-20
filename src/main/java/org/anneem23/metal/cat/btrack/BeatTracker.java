@@ -168,7 +168,7 @@ public class BeatTracker implements BeatTrackingAlgorithm {
         // calculate tempo observation vector from beat period observation vector
         for (int i = 0;i < 41;i++)
         {
-            double tempoToLagFactor = 60. * (Shared.SAMPLE_RATE / (float) Shared.HOPSIZE);
+            double tempoToLagFactor = 60. * (Shared.SAMPLE_RATE / (float) Shared.HOP_SIZE);
             index = (int) Math.round(tempoToLagFactor / ((double) ((2*i)+80)));
             index2 = (int) Math.round(tempoToLagFactor / ((double) ((4*i)+160)));
 
