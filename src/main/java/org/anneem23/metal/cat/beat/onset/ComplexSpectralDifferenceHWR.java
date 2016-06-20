@@ -14,7 +14,7 @@ import be.tarsos.dsp.util.fft.HammingWindow;
  * @author anneem23
  * @version 2.0
  */
-public class ComplexSpectralDifferenceHWR extends AbstractOnsetDetectionFunction {
+class ComplexSpectralDifferenceHWR extends AbstractOnsetDetectionFunction {
 
     private final float[] _prevPhase;
     private final float[] _prevPhase2;

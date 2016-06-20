@@ -8,10 +8,10 @@ import java.io.*;
 
 public class ComplexSpectralDifference extends AbstractOnsetDetectionFunction {
 
-    private float[] _prevPhase;
-    private float[] _prevPhase2;
+    private final float[] _prevPhase;
+    private final float[] _prevPhase2;
 
-    private File data = new File("/Users/anneem23/development/arbeit/team friday projekte/metal-cat/target/data.csv");
+    private final File data = new File("/Users/anneem23/development/arbeit/team friday projekte/metal-cat/target/data.csv");
 
     public ComplexSpectralDifference(int frameSize, int hopSize) throws IOException {
         super(frameSize, hopSize);
@@ -92,7 +92,7 @@ public class ComplexSpectralDifference extends AbstractOnsetDetectionFunction {
         for (int i = 0;i < _frameSize;i++)
         {
             // calculate phase value
-            _phase[i] = new Float(complexOut[i].phase());
+            _phase[i] = (float) complexOut[i].phase();
             //System.out.println("phase: " + _phase[i]);
             // calculate magnitude value
             _magnitude[i] = (float) complexOut[i].abs();

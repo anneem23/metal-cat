@@ -14,7 +14,7 @@ import be.tarsos.dsp.util.fft.HammingWindow;
  * @author anneem23
  * @version 2.0
  */
-public class HighFrequencyContent extends AbstractOnsetDetectionFunction {
+class HighFrequencyContent extends AbstractOnsetDetectionFunction {
 
 
     public HighFrequencyContent(int frameSize, int hopSize) {

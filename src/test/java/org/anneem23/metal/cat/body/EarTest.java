@@ -31,7 +31,7 @@ public class EarTest {
 
     private void whenListening() throws IOException, UnsupportedAudioFileException, InterruptedException {
         _ear.listen();
-        Thread.sleep(10l);
+        Thread.sleep(10L);
     }
 
     private void givenEarWithFileInput() throws IOException, UnsupportedAudioFileException {

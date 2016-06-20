@@ -41,12 +41,7 @@ public class Ear {
 
 
     public void listen() throws IOException, UnsupportedAudioFileException {
-        executorService.execute(new Runnable() {
-            @Override
-            public void run() {
-                audioDispatcher.run();
-            }
-        });
+        executorService.execute(audioDispatcher::run);
     }
 
 }

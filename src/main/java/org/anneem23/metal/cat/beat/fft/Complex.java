@@ -87,14 +87,14 @@ public class Complex {
     public Complex conjugate() {  return new Complex(re, -im); }
 
     // return a new Complex object whose value is the reciprocal of this
-    public Complex reciprocal() {
+    private Complex reciprocal() {
         double scale = re*re + im*im;
         return new Complex(re / scale, -im / scale);
     }
 
     // return the real or imaginary part
-    public double re() { return re; }
-    public double im() { return im; }
+    private double re() { return re; }
+    private double im() { return im; }
 
     // return a / b
     public Complex divides(Complex b) {
@@ -108,12 +108,12 @@ public class Complex {
     }
 
     // return a new Complex object whose value is the complex sine of this
-    public Complex sin() {
+    private Complex sin() {
         return new Complex(Math.sin(re) * Math.cosh(im), Math.cos(re) * Math.sinh(im));
     }
 
     // return a new Complex object whose value is the complex cosine of this
-    public Complex cos() {
+    private Complex cos() {
         return new Complex(Math.cos(re) * Math.cosh(im), -Math.sin(re) * Math.sinh(im));
     }
 
@@ -128,19 +128,22 @@ public class Complex {
     public static Complex plus(Complex a, Complex b) {
         double real = a.re + b.re;
         double imag = a.im + b.im;
-        Complex sum = new Complex(real, imag);
-        return sum;
+
+        return new Complex(real, imag);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Complex)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Complex)) {
+            return false;
+        }
 
         Complex complex = (Complex) o;
 
-        if (Double.compare(complex.re, re) != 0) return false;
-        return Double.compare(complex.im, im) == 0;
+        return Double.compare(complex.re, re) == 0 && Double.compare(complex.im, im) == 0;
 
     }
 
