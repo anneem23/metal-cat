@@ -1,8 +1,8 @@
-package org.anneem23.metal.cat.beat.onset;
+package org.anneem23.metal.cat.btrack.onset;
 
 import be.tarsos.dsp.AudioEvent;
 import be.tarsos.dsp.util.fft.HammingWindow;
-import org.anneem23.metal.cat.beat.fft.Complex;
+import org.anneem23.metal.cat.btrack.fft.Complex;
 
 import java.io.*;
 

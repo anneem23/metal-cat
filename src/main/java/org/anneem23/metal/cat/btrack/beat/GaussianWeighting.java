@@ -1,7 +1,7 @@
-package org.anneem23.metal.cat.beat.weighting;
+package org.anneem23.metal.cat.btrack.beat;
 
 /**
- * Gaussian Weighting functions used by {@link org.anneem23.metal.cat.beat.BeatPrediction}.
+ * Gaussian Weighting functions used by {@link org.anneem23.metal.cat.btrack.BeatPrediction}.
  *
  * @author anneem23
  */

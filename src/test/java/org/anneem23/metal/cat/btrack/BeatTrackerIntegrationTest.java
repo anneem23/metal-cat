@@ -1,9 +1,9 @@
-package org.anneem23.metal.cat.beat;
+package org.anneem23.metal.cat.btrack;
 
 import org.anneem23.metal.cat.audio.AudioInputStreamProcessor;
 import org.anneem23.metal.cat.audio.AudioSampleConverter;
 import org.anneem23.metal.cat.audio.Shared;
-import org.anneem23.metal.cat.beat.onset.ComplexSpectralDifference;
+import org.anneem23.metal.cat.btrack.onset.ComplexSpectralDifference;
 import org.junit.Test;
 
 import javax.sound.sampled.UnsupportedAudioFileException;

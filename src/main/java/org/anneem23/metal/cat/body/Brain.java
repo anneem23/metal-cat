@@ -2,9 +2,9 @@ package org.anneem23.metal.cat.body;
 
 import org.anneem23.metal.cat.audio.AudioSampleListener;
 import org.anneem23.metal.cat.audio.Shared;
-import org.anneem23.metal.cat.beat.BeatTracker;
-import org.anneem23.metal.cat.beat.BeatTrackingAlgorithm;
-import org.anneem23.metal.cat.beat.onset.ComplexSpectralDifference;
+import org.anneem23.metal.cat.btrack.BeatTracker;
+import org.anneem23.metal.cat.btrack.BeatTrackingAlgorithm;
+import org.anneem23.metal.cat.btrack.onset.ComplexSpectralDifference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

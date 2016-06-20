@@ -1,4 +1,4 @@
-package org.anneem23.metal.cat.beat.onset;
+package org.anneem23.metal.cat.btrack.onset;
 
 /**
  * OnsetDetectionFunction Interface with api method defintion

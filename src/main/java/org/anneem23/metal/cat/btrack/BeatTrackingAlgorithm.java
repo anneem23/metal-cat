@@ -1,4 +1,4 @@
-package org.anneem23.metal.cat.beat;
+package org.anneem23.metal.cat.btrack;
 
 /**
  * Beat tracking algorithm intended for use in live beat tracking

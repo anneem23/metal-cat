@@ -1,4 +1,4 @@
-package org.anneem23.metal.cat.beat.fft;
+package org.anneem23.metal.cat.btrack.fft;
 
 import org.junit.Test;
 

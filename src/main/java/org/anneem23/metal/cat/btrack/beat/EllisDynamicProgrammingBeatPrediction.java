@@ -1,7 +1,7 @@
-package org.anneem23.metal.cat.beat;
+package org.anneem23.metal.cat.btrack.beat;
 
 
-import static org.anneem23.metal.cat.beat.weighting.GaussianWeighting.*;
+import static org.anneem23.metal.cat.btrack.beat.GaussianWeighting.*;
 
 /**
  * Beat prediction is based on Ellis' dynamic programming beat
@@ -17,7 +17,7 @@ import static org.anneem23.metal.cat.beat.weighting.GaussianWeighting.*;
  *
  * @author anneem23
  */
-class BeatPrediction {
+public class EllisDynamicProgrammingBeatPrediction implements BeatPredictionAlgorithm {
 
     /**
      * the time (in DF samples) between two beats
@@ -30,7 +30,7 @@ class BeatPrediction {
     private int nextPredictionCounter;
     private final double tightness;
 
-    public BeatPrediction(int onsetDFBufferSize) {
+    public EllisDynamicProgrammingBeatPrediction(int onsetDFBufferSize) {
         this.tightness = (double) 5;
         this.nextPredictionCounter = 10;
         this.beatCounter = -1;
@@ -47,6 +47,7 @@ class BeatPrediction {
      * @param odfSample onset detection function sample
      * @param beatPeriod time (in DF samples) between two beats
      */
+    @Override
     public void processSample(double odfSample, float beatPeriod) {
         // update cumulative score
         updateCumulativeScore(odfSample, beatPeriod);
@@ -63,6 +64,7 @@ class BeatPrediction {
      *
      * @return true if beat in current frame else false
      */
+    @Override
     public boolean beatDetected() {
         return beatCounter == 0;
     }

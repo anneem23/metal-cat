@@ -22,12 +22,12 @@ import static javax.sound.sampled.AudioSystem.getAudioInputStream;
 public class AudioInputStreamProcessor implements AudioProcessor {
 
     private final AudioInputStream audioInputStream;
-    private final AudioFormat _format;
-    private int _bytesRead;
+    private final AudioFormat format;
+    private int bytesRead;
 
     public AudioInputStreamProcessor(AudioInputStream audioInputStream) {
         this.audioInputStream = audioInputStream;
-        _format = audioInputStream.getFormat();
+        format = audioInputStream.getFormat();
     }
 
     public AudioInputStreamProcessor(InputStream audioInputStream) throws IOException, UnsupportedAudioFileException {
@@ -44,7 +44,7 @@ public class AudioInputStreamProcessor implements AudioProcessor {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
         // Read the audio data into a memory buffer.
-        int nBufferSize = Shared.FRAME_SIZE * _format.getFrameSize();
+        int nBufferSize = Shared.FRAME_SIZE * format.getFrameSize();
 
 
         byte[] abBuffer = new byte[nBufferSize];
@@ -66,18 +66,18 @@ public class AudioInputStreamProcessor implements AudioProcessor {
     public byte[] readBytes(int bytes) throws IOException {
         byte[] abBuffer = new byte[bytes];
 
-        _bytesRead = this.audioInputStream.read(abBuffer);
+        bytesRead = this.audioInputStream.read(abBuffer);
 
         return abBuffer;
     }
 
     @Override
     public boolean bytesAvailable() {
-        return _bytesRead != -1;
+        return bytesRead != -1;
     }
 
     @Override
     public AudioFormat getFormat() {
-        return _format;
+        return format;
     }
 }

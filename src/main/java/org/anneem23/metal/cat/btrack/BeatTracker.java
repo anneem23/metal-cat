@@ -1,8 +1,10 @@
-package org.anneem23.metal.cat.beat;
+package org.anneem23.metal.cat.btrack;
 
 import be.tarsos.dsp.resample.Resampler;
 import org.anneem23.metal.cat.audio.Shared;
-import org.anneem23.metal.cat.beat.onset.OnsetDetectionFunction;
+import org.anneem23.metal.cat.btrack.onset.OnsetDetectionFunction;
+import org.anneem23.metal.cat.btrack.beat.EllisDynamicProgrammingBeatPrediction;
+import org.anneem23.metal.cat.btrack.tempo.TempoEstimation;
 
 import java.io.IOException;
 
@@ -13,13 +15,13 @@ import java.io.IOException;
  * beat prediction and tempo estimation.
  * <p>
  * <p>{@link TempoEstimation} is based on the Davies and Plumbley method
- * <p>{@link BeatPrediction} is based on Ellis' dynamic programming beat
+ * <p>{@link EllisDynamicProgrammingBeatPrediction} is based on Ellis' dynamic programming beat
  *
  */
 public class BeatTracker implements BeatTrackingAlgorithm {
 
     private final OnsetDetectionFunction onsetDetectionFunction;
-    private final BeatPrediction beatPrediction;
+    private final EllisDynamicProgrammingBeatPrediction beatPrediction;
 
     /** adds balance between existing and past data in cumulative score (default: 0.9) */
     private final double[] acf;
@@ -71,7 +73,7 @@ public class BeatTracker implements BeatTrackingAlgorithm {
         acf = new double[hopSize];
         combFilterBankOutput = new double[128];
 
-        beatPrediction = new BeatPrediction(onsetDFBufferSize);
+        beatPrediction = new EllisDynamicProgrammingBeatPrediction(onsetDFBufferSize);
 
         initializeArrays();
     }
@@ -82,6 +84,20 @@ public class BeatTracker implements BeatTrackingAlgorithm {
         processOnsetDetectionFunctionSample(odfSample);
     }
 
+    /**
+     * Our underlying model for beat tracking assumes that the sequence
+     * of beats, will correspond to a set of approximately periodic
+     * peaks in the onset detection function.
+     *
+     * To be able to track beats in music that varies in speed we need
+     * to regularly update the tempo estimate used by the beat tracking
+     * stage.
+     *
+     * In line with the beat prediction methodology, the tempo is
+     * re-estimated once each new predicted beat has elapsed.
+     *
+     * @param onsetDetectionFunctionSample
+     */
     private void processOnsetDetectionFunctionSample(double onsetDetectionFunctionSample) {
         // to ensure that the onset detection onset sample is positive
         // add a tiny constant to the sample to stop it from ever going
@@ -102,9 +118,14 @@ public class BeatTracker implements BeatTrackingAlgorithm {
         if (beatPrediction.beatDetected()) {
             // indicate a beat should be output
             beatDueInFrame = true;
-            // resample odf samples 
+            // resample odf samples
             resampleOnsetDetectionFunction();
-            // recalculate the tempo
+
+            // To be able to track beats in music that varies in speed we need
+            // to regularly update the tempo estimate used by the beat tracking
+            // stage.
+            // In line with the beat prediction methodology, the tempo is
+            // re-estimated once each new predicted beat has elapsed.
             calculateTempo();
         }
     }
