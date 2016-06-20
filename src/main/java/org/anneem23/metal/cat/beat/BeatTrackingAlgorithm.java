@@ -1,18 +1,25 @@
 package org.anneem23.metal.cat.beat;
 
 /**
- * AudioProcessingAlgorithm Model Object.
+ * Beat tracking algorithm intended for use in live beat tracking
  * <p>
- * <P>Various attributes of guitars, and related behaviour.
+ * <p>Provides API method to process chunks of audio data
  * <p>
- * <P>Note that {@link BigDecimal} is used to model the price - not double or float.
- * See {@link #AudioProcessingAlgorithm(String, BigDecimal, Integer)} for more information.
+ * <p>Implementors:  {@link BeatTracker}
  *
  * @author anneem23
- * @version 2.0
  */
 public interface BeatTrackingAlgorithm {
+
+    /**
+     * process an audio frame for the purpose of beat tracking
+     * @param audioBuffer audio buffer in doubles
+     */
     void processAudioFrame(double[] audioBuffer);
 
+    /**
+     * is there a beat in the current frame
+     * @return true if there is a beat, false if not
+     */
     boolean isBeatDueInFrame();
 }

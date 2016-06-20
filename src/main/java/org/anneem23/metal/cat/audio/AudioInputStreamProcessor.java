@@ -64,7 +64,6 @@ public class AudioInputStreamProcessor implements AudioProcessor {
 
     @Override
     public byte[] readBytes(int bytes) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] abBuffer = new byte[bytes];
 
         _bytesRead = this.audioInputStream.read(abBuffer);

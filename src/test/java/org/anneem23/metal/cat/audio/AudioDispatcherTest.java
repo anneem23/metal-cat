@@ -15,6 +15,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+@SuppressWarnings("SameParameterValue")
 @RunWith(MockitoJUnitRunner.class)
 public class AudioDispatcherTest {
 
@@ -37,7 +38,7 @@ public class AudioDispatcherTest {
     private void whenExecutingDispatcher() throws InterruptedException {
         final ExecutorService executorService = Executors.newSingleThreadExecutor();
         executorService.execute(_audioDispatcher);
-        Thread.sleep(10000l);
+        Thread.sleep(10000L);
     }
 
     private void givenDispatcherInputFromFile(String file) throws IOException, UnsupportedAudioFileException {

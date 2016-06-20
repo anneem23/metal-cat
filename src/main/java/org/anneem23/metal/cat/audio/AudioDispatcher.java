@@ -15,7 +15,7 @@ public class AudioDispatcher implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AudioDispatcher.class);
 
-    private final CopyOnWriteArrayList<AudioSampleListener> listeners = new CopyOnWriteArrayList();
+    private final CopyOnWriteArrayList<AudioSampleListener> listeners = new CopyOnWriteArrayList<>();
     private final AudioProcessor audioProcessor;
 
     public AudioDispatcher(AudioProcessor audioProcessor) {

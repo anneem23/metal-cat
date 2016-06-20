@@ -2,6 +2,8 @@ package org.anneem23.metal.cat.tools;
 
 import org.anneem23.metal.cat.audio.Shared;
 import org.anneem23.metal.cat.audio.TargetDataLineProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sound.sampled.*;
 import java.util.Arrays;
@@ -16,8 +18,8 @@ import static javax.sound.sampled.AudioSystem.getMixer;
  *
  * @author anneem23
  */
-public class AudioInputPrinter {
-
+class AudioInputPrinter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AudioInputPrinter.class);
 
     public static void main(String[] args) throws LineUnavailableException {
         AudioFormat format = new AudioFormat(48000, 16, 1, true, false);
@@ -91,7 +93,7 @@ public class AudioInputPrinter {
 
 
         } catch (Exception e) {
-            System.err.println(e);
+            LOGGER.error("Failed to open Mixer.", e);
         }
 
 

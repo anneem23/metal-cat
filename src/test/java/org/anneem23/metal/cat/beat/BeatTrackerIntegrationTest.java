@@ -57,17 +57,12 @@ public class BeatTrackerIntegrationTest {
         ///////////////////////////////////////////
         //////// Begin Processing Loop ////////////
 
-        for (int i=0;i < numframes;i++)
-        {
+        for (int i=0;i < numframes;i++) {
             // add new samples to frame
-            for (int n = 0; n < Shared.HOPSIZE; n++)
-            {
-                buffer[n] = audioData[(i*Shared.HOPSIZE)+n];
-            }
+            System.arraycopy(audioData, (i * Shared.HOPSIZE), buffer, 0, Shared.HOPSIZE);
 
             _beatTracker.processAudioFrame(buffer);
-            if (_beatTracker.isBeatDueInFrame())
-            {
+            if (_beatTracker.isBeatDueInFrame()) {
                 beats[beatnum] = _beatTracker.getBeatTimeInSeconds(i,Shared.HOPSIZE,44100);
                 System.out.println (beatnum + ". beat at " + beats[beatnum] + " secs");
                 beatnum = beatnum + 1;

@@ -1,8 +1,5 @@
 package org.anneem23.metal.cat.beat;
 
-import be.tarsos.dsp.onsets.OnsetDetector;
-import be.tarsos.dsp.onsets.OnsetHandler;
-import be.tarsos.dsp.onsets.PrintOnsetHandler;
 import be.tarsos.dsp.resample.Resampler;
 import org.anneem23.metal.cat.audio.Shared;
 import org.anneem23.metal.cat.beat.onset.OnsetDetectionFunction;
@@ -10,116 +7,74 @@ import org.anneem23.metal.cat.beat.onset.OnsetDetectionFunction;
 import java.io.IOException;
 
 /**
- * BeatTracker is a java implementation of Adam Starks
- * BTrack algorithm.
+ * BeatTracker is a java implementation of Adam Starks BTrack algorithm.
  * <p>
- * It does live beat tracking and is based on a
- * combination of two algorithms:
+ * It does live beat tracking with a combination of two well-known algorithms for
+ * beat prediction and tempo estimation.
  * <p>
- * - Tempo estimation is based on the Davies and Plumbley method
- * - Beat prediction is based on Ellis' dynamic programming beat
+ * <p>{@link TempoEstimation} is based on the Davies and Plumbley method
+ * <p>{@link BeatPrediction} is based on Ellis' dynamic programming beat
  *
  */
-public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
+public class BeatTracker implements BeatTrackingAlgorithm {
 
-    private OnsetHandler onsetHandler;
     private final OnsetDetectionFunction onsetDetectionFunction;
+    private final BeatPrediction beatPrediction;
 
-    private int m0;
-    private final double tightness;
     /** adds balance between existing and past data in cumulative score (default: 0.9) */
     private final double[] acf;
     private final int hopSize;
 
+
+
+    private double estimatedTempo;
+    /**
+     * tempo transition matrix
+     */
+    private final double[][] tempoTransitionMatrix = new double[41][41];
+    private final double[] tempoObservationVector = new double[41];
+
+    private boolean beatDueInFrame;
+
+    /**
+     * the time (in DF samples) between two beats
+     */
+    private float beatPeriod;
     private final int onsetDFBufferSize;
     private final float[] onsetDF;
 
-    private double estimatedTempo;
-    private final double[][] tempoTransitionMatrix = new double[41][41]; /**<  tempo transition matrix */
-    private final double[] tempoObservationVector = new double[41];
-
-    private final float[] cumulativeScore;
-
-    private float beatPeriod;                                     /** the time (in DF samples) between two beats    */
-    private boolean beatDueInFrame;
-    private int beatCounter = -1;
-
     private final double[] combFilterBankOutput;
     private final float[] weightingVector = new float[128];
+    /**
+     * to hold final tempo candidate array
+     */
+    private final double[] deltas = new double[41];
+    /**
+     * previous delta
+     */
+    private final double[] previousDeltas = new double[41];
+    private final double[] resampledOnsetDetectionFunctionData;
 
-    private final double[] deltas = new double[41];                       /**<  to hold final tempo candidate array */
-    private final double[] previousDeltas = new double[41];                   /**<  previous delta */
-    private final double[] previousDeltasFixed;
-    private double[] resampledOnsetDetectionFunctionData;
 
     public BeatTracker(int hopSize, OnsetDetectionFunction onsetDetector, float sampleRate) throws IOException {
         onsetDetectionFunction = onsetDetector;
         onsetDFBufferSize = (512*512)/hopSize;
         onsetDF = new float[onsetDFBufferSize];
         resampledOnsetDetectionFunctionData = new double[512];
-        cumulativeScore = new float[onsetDFBufferSize];
+
         // initialize beat period with 120 bpm
         beatPeriod = Math.round(60/((((double) hopSize)/ sampleRate)* 120));
         // initialize estimated tempo with 120 bpm
         estimatedTempo = 120.0;
         this.hopSize = hopSize;
-        onsetHandler = new PrintOnsetHandler();
-        m0 = 10;
-        acf = new double[hopSize];
-        tightness = 5;
-        combFilterBankOutput = new double[128];
-        previousDeltasFixed = new double[41];
 
+        acf = new double[hopSize];
+        combFilterBankOutput = new double[128];
+
+        beatPrediction = new BeatPrediction(onsetDFBufferSize);
 
         initializeArrays();
-
-        final double rayparam = 43;
-        // create rayleigh weighting vector
-        for (int n = 0;n < 128;n++)
-        {
-            weightingVector[n] = (float) (((double) n / Math.pow(rayparam,2)) * Math.exp((-1*Math.pow((double)-n,2)) / (2*Math.pow(rayparam,2))));
-        }
-
-        // initialise prev_delta
-        for (int i = 0;i < 41;i++)
-        {
-            previousDeltas[i] = 1;
-        }
-
-        // create tempo transition matrix
-        double x;
-
-        for (int i = 0;i < 41;i++)
-        {
-            for (int j = 0;j < 41;j++)
-            {
-                x = (double) j+1;
-                double tMu = (double) i + 1;
-                double mSig = (double) 41 / 8;
-                tempoTransitionMatrix[i][j] = (1 / (mSig * Math.sqrt(2*Math.PI))) * Math.exp( (-1*Math.pow(x- tMu,2)) / (2*Math.pow(mSig,2)) );
-            }
-        }
-
-
     }
-
-    private void initializeArrays() {
-        // initialise df_buffer to zeros
-        for (int i = 0; i < onsetDFBufferSize; i++)
-        {
-            onsetDF[i] = 0;
-            cumulativeScore[i] = 0;
-
-
-            if ((i %  Math.round(beatPeriod)) == 0) {
-                onsetDF[i] = 1;
-            }
-
-        }
-
-    }
-
-
 
     @Override
     public void processAudioFrame(double[] audioBuffer) {
@@ -129,38 +84,25 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
 
     private void processOnsetDetectionFunctionSample(double onsetDetectionFunctionSample) {
         // to ensure that the onset detection onset sample is positive
-        double odfSample = Math.abs(onsetDetectionFunctionSample);
-
         // add a tiny constant to the sample to stop it from ever going
         // to zero. this is to avoid problems further down the line
-        odfSample = odfSample + 0.0001;
-
-        m0--;
-        beatCounter--;
-        beatDueInFrame = false;
+        double odfSample = Math.abs(onsetDetectionFunctionSample) + 0.0001;
 
         // move all samples back one step
-        for (int i = 0; i < (onsetDFBufferSize -1); i++)
-        {
-            onsetDF[i] = onsetDF[i+1];
-        }
+        System.arraycopy(onsetDF, 1, onsetDF, 0, onsetDFBufferSize - 1);
 
         // add new sample at the end
         onsetDF[onsetDFBufferSize -1] = (float) odfSample;
-        // update cumulative score
-        updateCumulativeScore(odfSample);
 
-        // if we are halfway between beats
-        if (m0 == 0)
-        {
-            predictBeat();
-        }
+        beatDueInFrame = false;
+        // beat prediction
+        beatPrediction.processSample(odfSample, beatPeriod);
 
         // if we are at a beat
-        if (beatCounter == 0)
-        {
-            beatDueInFrame = true;	// indicate a beat should be output
-
+        if (beatPrediction.beatDetected()) {
+            // indicate a beat should be output
+            beatDueInFrame = true;
+            // resample odf samples 
             resampleOnsetDetectionFunction();
             // recalculate the tempo
             calculateTempo();
@@ -172,119 +114,16 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         float[] output = new float[512];
         float[] input = new float[onsetDFBufferSize];
 
-        for (int i = 0; i < onsetDFBufferSize; i++)
-        {
-            input[i] = onsetDF[i];
-        }
+        System.arraycopy(onsetDF, 0, input, 0, onsetDFBufferSize);
 
         Resampler resampler = new Resampler(true, 1, 200);
-
         resampler.process(1,input, 0, onsetDFBufferSize, true, output,  0, 512);
-
 
         for ( int i = 0; i < output.length; i++) {
             resampledOnsetDetectionFunctionData[i] = output[i];
         }
     }
 
-    public void findOnsets(double onsetDetectionFunctionSample, long frame){
-        // to ensure that the onset detection onset sample is positive
-        double odfSample = Math.abs(onsetDetectionFunctionSample);
-
-        // add a tiny constant to the sample to stop it from ever going
-        // to zero. this is to avoid problems further down the line
-        odfSample = odfSample + 0.0001;
-
-        m0--;
-        beatCounter--;
-        beatDueInFrame = false;
-
-        // move all samples back one step
-        for (int i = 0; i < (onsetDFBufferSize -1); i++)
-        {
-            onsetDF[i] = onsetDF[i+1];
-        }
-
-        // add new sample at the end
-        onsetDF[onsetDFBufferSize -1] = (float) odfSample;
-
-        // update cumulative score
-        updateCumulativeScore(odfSample);
-
-        // if we are halfway between beats
-        if (m0 == 0)
-        {
-            predictBeat();
-        }
-
-        // if we are at a beat
-        if (beatCounter == 0)
-        {
-            beatDueInFrame = true;	// indicate a beat should be output
-            onsetHandler.handleOnset(getBeatTimeInSeconds(frame, hopSize, (int) Shared.SAMPLE_RATE), estimatedTempo);
-            // recalculate the tempo
-            calculateTempo();
-        }
-    }
-
-    /**
-     * Recursive function building the weighted sum of the current
-     * ODF sample and the cumulative score from the past at the most
-     * likely position
-     *
-     * @param odfSample
-     */
-    private void updateCumulativeScore(double odfSample) {
-        float max;
-        float wcumscore;
-
-        // two beat periods in the past
-        final int start = onsetDFBufferSize - Math.round(2 * beatPeriod);
-        // half a beat period in the past
-        final int end = onsetDFBufferSize - Math.round(beatPeriod / 2);
-        // interval in the past that is going to be searched
-        final int winsize = end-start+1;
-        final float[] window = new float[winsize];
-        // most likely beat over the interval
-        // allowed are vals in range of -|2*beatperiod| and -|beatperiod/2|
-        double mostLikelyBeat = -2 * beatPeriod;
-
-        // create window
-        for (int i = 0;i < winsize;i++)
-        {
-            // to ensure that data exactly beatPeriod samples in the past is preferred over other data,
-            // a weighting factor (log Gaussian transition weighting) is introducedy
-            window[i] = (float) Math.exp((-1*Math.pow(tightness * Math.log(-mostLikelyBeat/ beatPeriod), 2)) / 2);
-
-            mostLikelyBeat = mostLikelyBeat+1;
-        }
-
-        /* find the most likely beat position in the past */
-        max = 0;
-        int n = 0;
-        for (int i=start;i <= end;i++) {
-            // calculate new cumulative score value (max) from cumulative score and weighting factor
-            wcumscore = cumulativeScore[i] * window[n];
-
-            if (wcumscore > max) {
-                // replace max if new score bigger
-                max = wcumscore;
-            }
-            n++;
-        }
-
-        // shift cumulative score back one
-        for (int i = 0; i < (onsetDFBufferSize -1); i++) {
-            cumulativeScore[i] = cumulativeScore[i+1];
-        }
-
-        /* set new score and apply weighting   */
-        /* tightness of transition weighting window (default: 5)*/
-        final float alpha = 0.9f;
-        // add the new score at the end
-        cumulativeScore[onsetDFBufferSize -1] = (float) (((1 - alpha) * odfSample) + (alpha * max));
-
-    }
 
     /**
      * Regular tempo updates
@@ -320,18 +159,8 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
         double maxind;
         double curval;
 
-        // if tempo is fixed then always use a fixed set of tempi as the previous observation probability onset
-        boolean tempoFixed = false;
-        if (tempoFixed)
-        {
-            for (int k = 0;k < 41;k++)
-            {
-                previousDeltas[k] = previousDeltasFixed[k];
-            }
-        }
 
-        for (int j=0;j < 41;j++)
-        {
+        for (int j=0;j < 41;j++) {
             maxval = -1;
             for (int i = 0;i < 41;i++)
             {
@@ -365,8 +194,7 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
 
         beatPeriod = Math.round((60.0*Shared.SAMPLE_RATE)/(((2*maxind)+80)*((double) hopSize)));
 
-        if (beatPeriod > 0)
-        {
+        if (beatPeriod > 0) {
             estimatedTempo = 60.0/((((double) hopSize) / Shared.SAMPLE_RATE)* beatPeriod);
         }
     }
@@ -501,100 +329,59 @@ public class BeatTracker implements OnsetDetector, BeatTrackingAlgorithm {
 
     }
 
-    private void predictBeat() {
-        int windowSize = (int) beatPeriod;
-        double[] futureCumulativeScore = new double[onsetDFBufferSize + windowSize];
-        double[] futureWindow = new double[windowSize];
-        // copy cumscore to first part of fcumscore
-        for (int i = 0; i < onsetDFBufferSize; i++)
-        {
-            futureCumulativeScore[i] = cumulativeScore[i];
-        }
-
-        // create future window
-        double v = 1;
-        for (int i = 0;i < windowSize;i++)
-        {
-            futureWindow[i] = Math.exp((-1*Math.pow(v - (beatPeriod /2),2))   /  (2*Math.pow(beatPeriod /2 ,2)));
-            v++;
-        }
-
-        // create past window
-        v = -2* beatPeriod;
-        int start = onsetDFBufferSize - Math.round(2* beatPeriod);
-        int end = onsetDFBufferSize - Math.round(beatPeriod /2);
-        int pastwinsize = end-start+1;
-        double[] pastWindow = new double[pastwinsize];
-
-        for (int i = 0;i < pastwinsize;i++)
-        {
-            pastWindow[i] = Math.exp((-1*Math.pow(tightness *Math.log(-v/ beatPeriod),2))/2);
-            v = v+1;
-        }
-
-
-
-        // calculate future cumulative score
-        double max;
-        int n;
-        double wcumscore;
-        for (int i = onsetDFBufferSize; i < (onsetDFBufferSize +windowSize); i++)
-        {
-            start = i - Math.round(2* beatPeriod);
-            end = i - Math.round(beatPeriod /2);
-
-            max = 0;
-            n = 0;
-            for (int k=start;k <= end;k++)
-            {
-                wcumscore = futureCumulativeScore[k]*pastWindow[n];
-
-                if (wcumscore > max)
-                {
-                    max = wcumscore;
-                }
-                n++;
-            }
-
-            futureCumulativeScore[i] = max;
-        }
-
-
-        // predict beat
-        max = 0;
-        n = 0;
-
-        for (int i = onsetDFBufferSize; i < (onsetDFBufferSize +windowSize); i++)
-        {
-            wcumscore = futureCumulativeScore[i]*futureWindow[n];
-
-            if (wcumscore > max)
-            {
-                max = wcumscore;
-                beatCounter = n;
-            }
-
-            n++;
-        }
-        // set next prediction time
-        m0 = beatCounter +Math.round(beatPeriod /2.0f);
-
-    }
 
     @Override
     public boolean isBeatDueInFrame() {
         return beatDueInFrame;
     }
 
-
-
-    @Override
-    public void setHandler(OnsetHandler handler) {
-        onsetHandler = handler;
-    }
-
     public double getBeatTimeInSeconds(long frameNumber,int hopSize, int samplingFrequency) {
         return ((double) hopSize / (double) samplingFrequency) * (double) frameNumber;
     }
+
+
+
+
+
+    private void initializeArrays() {
+        // initialise df_buffer to zeros
+        for (int i = 0; i < onsetDFBufferSize; i++)
+        {
+            onsetDF[i] = 0;
+
+            if ((i %  Math.round(beatPeriod)) == 0) {
+                onsetDF[i] = 1;
+            }
+
+        }
+
+        final double rayparam = 43;
+        // create rayleigh weighting vector
+        for (int n = 0;n < 128;n++)
+        {
+            weightingVector[n] = (float) (((double) n / Math.pow(rayparam,2)) * Math.exp((-1*Math.pow((double)-n,2)) / (2*Math.pow(rayparam,2))));
+        }
+
+        // initialise prev_delta
+        for (int i = 0;i < 41;i++)
+        {
+            previousDeltas[i] = 1;
+        }
+
+        // create tempo transition matrix
+        double x;
+
+        for (int i = 0;i < 41;i++)
+        {
+            for (int j = 0;j < 41;j++)
+            {
+                x = (double) j+1;
+                double tMu = (double) i + 1;
+                double mSig = (double) 41 / 8;
+                tempoTransitionMatrix[i][j] = (1 / (mSig * Math.sqrt(2*Math.PI))) * Math.exp( (-1*Math.pow(x- tMu,2)) / (2*Math.pow(mSig,2)) );
+            }
+        }
+    }
+
 
 }

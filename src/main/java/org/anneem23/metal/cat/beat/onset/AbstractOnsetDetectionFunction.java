@@ -12,18 +12,18 @@ import org.anneem23.metal.cat.beat.fft.FFT;
  */
 abstract class AbstractOnsetDetectionFunction implements OnsetDetectionFunction {
 
-    protected final float[] _magnitude;
-    protected final float[] _phase;
+    final float[] _magnitude;
+    final float[] _phase;
 
 
 
-    protected final int _frameSize;					/**< audio framesize */
+    final int _frameSize;					/**< audio framesize */
     private final int _hopSize;						/**< audio hopsize */
-    protected float[] _prevMagnitude;
-    private HammingWindow window;
-    private double[] _frame;
+    final float[] _prevMagnitude;
+    private final HammingWindow window;
+    private final double[] _frame;
 
-    public AbstractOnsetDetectionFunction(int frameSize, int hopSize) {
+    AbstractOnsetDetectionFunction(int frameSize, int hopSize) {
         _hopSize = hopSize; // set hopsize
         _frameSize = frameSize; // set framesize
         window = new HammingWindow();
@@ -46,7 +46,7 @@ abstract class AbstractOnsetDetectionFunction implements OnsetDetectionFunction 
         }
     }
 
-    protected Complex[] performFFT() {
+    Complex[] performFFT() {
         int fsize2 = (_frameSize/2);
         float[] buffer = new float[fsize2];
         for (int i = 0; i < fsize2; i++)
@@ -69,10 +69,7 @@ abstract class AbstractOnsetDetectionFunction implements OnsetDetectionFunction 
 
     public double calculateOnsetDetectionFunctionSample(double[] buffer) {
         // shift audio samples back in _frame by hop size
-        for (int i = 0; i < (_frameSize - _hopSize); i++)
-        {
-            _frame[i] = _frame[i+_hopSize];
-        }
+        System.arraycopy(_frame, 0 + _hopSize, _frame, 0, _frameSize - _hopSize);
 
         // add new samples to _frame from input buffer
         int j = 0;

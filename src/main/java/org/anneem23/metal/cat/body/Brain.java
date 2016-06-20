@@ -22,14 +22,14 @@ public class Brain implements AudioSampleListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(Brain.class);
 
     private final BeatTrackingAlgorithm beatTrackingAlgorithm;
-    private CopyOnWriteArrayList<Moveable> metalListeners = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Moveable> metalListeners = new CopyOnWriteArrayList<>();
 
-    public Brain(BeatTrackingAlgorithm algorithm) {
+    private Brain(BeatTrackingAlgorithm algorithm) {
         beatTrackingAlgorithm = algorithm;
     }
 
     public Brain() throws IOException {
-        beatTrackingAlgorithm = new BeatTracker(Shared.HOPSIZE, new ComplexSpectralDifference(Shared.FRAME_SIZE, Shared.HOPSIZE), Shared.SAMPLE_RATE);
+        this(new BeatTracker(Shared.HOPSIZE, new ComplexSpectralDifference(Shared.FRAME_SIZE, Shared.HOPSIZE), Shared.SAMPLE_RATE));
     }
 
 
@@ -46,9 +46,7 @@ public class Brain implements AudioSampleListener {
 
         for (int i=0;i < numFrames;i++) {
             // add new samples to frame
-            for (int n = 0; n < Shared.HOPSIZE; n++) {
-                buffer[n] = audioData[(i*Shared.HOPSIZE)+n];
-            }
+            System.arraycopy(audioData, (i * Shared.HOPSIZE) + 0, buffer, 0, Shared.HOPSIZE);
 
             beatTrackingAlgorithm.processAudioFrame(buffer);
             if (beatTrackingAlgorithm.isBeatDueInFrame()) {
