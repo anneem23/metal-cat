@@ -167,7 +167,7 @@ public class TempoEstimation {
 
         // To prevent deltas from growing exponentially or approaching zero at each
         // iteration we normalise it to sum to unity
-        normaliseArray(deltas, 41);
+        normaliseArray(deltas);
 
 
         // We then find the current tempo beatPeriod as the index of the maximum value
@@ -183,7 +183,7 @@ public class TempoEstimation {
             previousDeltas[j] = deltas[j];
         }
 
-        // why this? round((60.0*44100.0)/(((2*maxind)+80)*((double) hopSize)));
+        //TODO why this? round((60.0*44100.0)/(((2*maxind)+80)*((double) hopSize)));
         beatPeriod = Math.round((60.0 * Shared.SAMPLE_RATE) / (((2 * maxIdx) + MIN_BPM) * ((double) hopSize)));
 
         if (beatPeriod > 0) {
@@ -290,23 +290,24 @@ public class TempoEstimation {
     }
 
     /**
+     * Normalize the array so that the minimum and maximum values are 0 and 1
      *
-     * @param array
-     * @param length
+     * @param array the data to be normalized
      */
-    private void normaliseArray(double[] array, int length) {
+    private void normaliseArray(double[] array) {
         double sum = 0;
-
-        for (int i = 0;i < length;i++) {
+        for (int i = 0;i < array.length;i++) {
             if (array[i] > 0) {
                 sum = sum + array[i];
             }
         }
 
-        if (sum > 0) {
-            for (int i = 0;i < length;i++) {
-                array[i] = array[i] / sum;
-            }
+        if (sum == 0) {
+            return;
+        }
+
+        for (int i = 0;i < array.length;i++) {
+            array[i] = array[i] / sum;
         }
 
     }
@@ -349,11 +350,12 @@ public class TempoEstimation {
      * @return
      */
     private static double weightingFactor(double rayparam, double n) {
-        // (n / rayparam^2) * exp(( -1 * -n^2) / (2 * rayparam^2))
-        // (n / rayparam^2) * gaussian(n, rayparam)?
+        //TODO (n / rayparam^2) * exp(( -1 * -n^2) / (2 * rayparam^2))
+        //TODO (n / rayparam^2) * gaussian(n, rayparam)?
         return (n / Math.pow(rayparam, 2)) * Math.exp((-1 * Math.pow(-n, 2)) / (2 * Math.pow(rayparam, 2)));
     }
 
+    //TODO is that really a gaussian function?
     private static double gaussian(double ti, double tj, double omega) {
         return Math.exp( (-1*Math.pow(ti- tj,2)) / (2*Math.pow(omega,2)));
     }
