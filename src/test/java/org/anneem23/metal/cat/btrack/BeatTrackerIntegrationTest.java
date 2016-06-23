@@ -19,8 +19,6 @@ public class BeatTrackerIntegrationTest {
     private BeatTracker _beatTracker;
     private int _beatnum;
 
-
-
     @Test
     public void test120BeatsTrackedFor120BpmTrack() throws IOException, UnsupportedAudioFileException {
         givenBTrackWithComplexSpectralDifference();
