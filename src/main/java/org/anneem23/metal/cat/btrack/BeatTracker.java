@@ -122,6 +122,11 @@ public class BeatTracker implements BeatTrackingAlgorithm {
         return beatDueInFrame;
     }
 
+    @Override
+    public int getTempo() {
+        return (int) tempoEstimation.tempo();
+    }
+
     public double getBeatTimeInSeconds(long frameNumber,int hopSize, int samplingFrequency) {
         return ((double) hopSize / (double) samplingFrequency) * (double) frameNumber;
     }

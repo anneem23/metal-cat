@@ -21,12 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Arm implements Moveable {
 
-    private static final int START_POSITION = 20;    // 360 degrees in radians
-    private static final double THREE_HUNDRED_SIXTY_DEGREES = Math.PI * 2;
-
-    private final AtomicInteger position = new AtomicInteger(0);
-    private final AtomicInteger duration = new AtomicInteger(0);
-    private final AtomicBoolean moving = new AtomicBoolean(Boolean.FALSE);
+    private static final int START_POSITION = 15;
 
     public Arm() {
         final GpioController gpio = GpioFactory.getInstance();
@@ -34,39 +29,17 @@ public class Arm implements Moveable {
         SoftPwm.softPwmCreate(RaspiPin.GPIO_15.getAddress(), START_POSITION, 200);
     }
 
-    public void move(int position, int duration) throws InterruptedException {
-        SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), position);
-        int millis = duration / 2;
-        Thread.sleep(millis);
-        SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), START_POSITION);
-        Thread.sleep(millis);
-    }
 
     @Override
-    public void updateBpm(double bpm) {
+    public void dance(int bpm) throws InterruptedException {
         double hertz = bpm / 60.0;
-        double result = Math.sin(hertz * THREE_HUNDRED_SIXTY_DEGREES);
+        int millis = (int) (1000 / hertz);
 
-        this.position.set((int) (-4 * result) + 14);
-        this.duration.set((int) (1000 / hertz));
-    }
-
-    @Override
-    public void dance() throws InterruptedException {
-        SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), 20);
-        Thread.sleep(20);
+        SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), 10);
+        Thread.sleep(millis);
         SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), START_POSITION);
     }
 
-    @Override
-    public boolean isDancing() {
-        return moving.get();
-    }
-
-    @Override
-    public void setDancing(boolean dancing) {
-        moving.set(dancing);
-    }
 
 
 }

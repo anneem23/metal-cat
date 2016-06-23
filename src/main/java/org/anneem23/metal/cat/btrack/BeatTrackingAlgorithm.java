@@ -22,4 +22,6 @@ public interface BeatTrackingAlgorithm {
      * @return true if there is a beat, false if not
      */
     boolean isBeatDueInFrame();
+
+    int getTempo();
 }

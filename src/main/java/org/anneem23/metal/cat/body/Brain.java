@@ -53,16 +53,17 @@ public class Brain implements AudioSampleListener {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("beat found.");
                 }
-                moveAll();
+                moveAll(beatTrackingAlgorithm.getTempo());
             }
         }
 
     }
 
-    private void moveAll() {
+    private void moveAll(int tempo) {
+        LOGGER.info("tempo = " + tempo);
         for (Moveable moveable : metalListeners) {
             try {
-                moveable.dance();
+                moveable.dance(tempo);
             } catch (InterruptedException e) {
                 LOGGER.error("MetalCat can't move!", e);
             }

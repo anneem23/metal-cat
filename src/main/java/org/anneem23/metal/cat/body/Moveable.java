@@ -7,8 +7,5 @@ package org.anneem23.metal.cat.body;
  * @version 2.0
  */
 interface Moveable {
-    void updateBpm(double bpm);
-    void dance() throws InterruptedException;
-    boolean isDancing();
-    void setDancing(boolean dancing);
+    void dance(int tempo) throws InterruptedException;
 }
