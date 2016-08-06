@@ -4,6 +4,7 @@ import org.anneem23.metal.cat.audio.AudioInputStreamProcessor;
 import org.anneem23.metal.cat.audio.AudioSampleConverter;
 import org.anneem23.metal.cat.audio.Shared;
 import org.anneem23.metal.cat.btrack.onset.ComplexSpectralDifference;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -24,6 +25,15 @@ public class BeatTrackerIntegrationTest {
         givenBTrackWithComplexSpectralDifference();
         whenTrackingBeatsOf("120bpm.wav");
         thenNumberOfBeatsDetectedIs(121);
+    }
+
+
+    @Ignore
+    @Test
+    public void test120BeatsTrackedForRecordingOfChemicalBrothers() throws IOException, UnsupportedAudioFileException {
+        givenBTrackWithComplexSpectralDifference();
+        whenTrackingBeatsOf("recording.wav");
+        thenNumberOfBeatsDetectedIs(120);
     }
 
     @Test

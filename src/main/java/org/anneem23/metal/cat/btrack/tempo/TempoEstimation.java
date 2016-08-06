@@ -2,6 +2,8 @@ package org.anneem23.metal.cat.btrack.tempo;
 
 import org.anneem23.metal.cat.audio.Shared;
 
+import java.util.Arrays;
+
 /**
  * Tempo estimation is based on the two state model of Davies and Plumbley
  * <p>
@@ -25,8 +27,8 @@ import org.anneem23.metal.cat.audio.Shared;
  */
 public class TempoEstimation {
 
-    private static final int MIN_BPM = 80;
-    private static final int MAX_BPM = 160;
+    protected static final double MIN_BPM = 80;
+    protected static final double MAX_BPM = 160;
 
     private final int hopSize;
     private double estimatedTempo;
@@ -122,6 +124,7 @@ public class TempoEstimation {
      *             detection funtion
      */
     public void calculateTempo(double[] data) {
+        System.out.println(Arrays.toString(data));
         // adaptive threshold on input (II)
         double[] adaptiveThreshold = adaptiveThreshold(data, 512);
 

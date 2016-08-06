@@ -76,6 +76,12 @@ class MicrophoneRecorder {
                     System.out.println("Start recording...");
                     // start recording
                     AudioSystem.write(ais, fileType, wavFile);
+                    long start = System.currentTimeMillis();
+                    long duration;
+                    do {
+                        duration = start - System.currentTimeMillis();
+                        System.out.println(duration);
+                    } while (duration < 60000);
                 } else {
                     System.out.println("Line is not supported. Mixer needs one of ");
                     for (Line.Info li : mixer.getTargetLineInfo())
