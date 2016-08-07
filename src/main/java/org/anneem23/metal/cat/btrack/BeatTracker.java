@@ -1,7 +1,6 @@
 package org.anneem23.metal.cat.btrack;
 
 import be.tarsos.dsp.resample.Resampler;
-import org.anneem23.metal.cat.audio.Shared;
 import org.anneem23.metal.cat.btrack.onset.OnsetDetectionFunction;
 import org.anneem23.metal.cat.btrack.beat.EllisDynamicProgrammingBeatPrediction;
 import org.anneem23.metal.cat.btrack.tempo.TempoEstimation;
@@ -24,10 +23,6 @@ public class BeatTracker implements BeatTrackingAlgorithm {
     private final EllisDynamicProgrammingBeatPrediction beatPrediction;
     private final TempoEstimation tempoEstimation;
 
-    /**
-     * the time (in DF samples) between two beats
-     */
-    private float beatPeriod;
     private final int onsetDFBufferSize;
     private final float[] onsetDF;
     private boolean beatDueInFrame;
@@ -38,11 +33,9 @@ public class BeatTracker implements BeatTrackingAlgorithm {
         onsetDFBufferSize = (512*512)/hopSize;
         onsetDF = new float[onsetDFBufferSize];
 
-        // initialize beat period with 120 bpm
-        beatPeriod = Math.round(60/((((double) hopSize)/ sampleRate)* 120));
 
         beatPrediction = new EllisDynamicProgrammingBeatPrediction(onsetDFBufferSize);
-        tempoEstimation = new TempoEstimation(hopSize);
+        tempoEstimation = new TempoEstimation(hopSize, sampleRate);
 
         initializeArrays();
     }
@@ -65,7 +58,7 @@ public class BeatTracker implements BeatTrackingAlgorithm {
      * In line with the beat prediction methodology, the tempo is
      * re-estimated once each new predicted beat has elapsed.
      *
-     * @param onsetDetectionFunctionSample
+     * @param onsetDetectionFunctionSample the odf sample
      */
     private void processOnsetDetectionFunctionSample(double onsetDetectionFunctionSample) {
         // to ensure that the onset detection onset sample is positive
@@ -81,7 +74,7 @@ public class BeatTracker implements BeatTrackingAlgorithm {
 
         beatDueInFrame = false;
         // beat prediction
-        beatPrediction.processSample(odfSample, beatPeriod);
+        beatPrediction.processSample(odfSample, tempoEstimation.beatPeriod());
 
         // if we are at a beat
         if (beatPrediction.beatDetected()) {
@@ -135,7 +128,7 @@ public class BeatTracker implements BeatTrackingAlgorithm {
         // initialise df_buffer to zeros
         for (int i = 0; i < onsetDFBufferSize; i++) {
             onsetDF[i] = 0;
-            if ((i %  Math.round(beatPeriod)) == 0) {
+            if ((i % Math.round(tempoEstimation.beatPeriod())) == 0) {
                 onsetDF[i] = 1;
             }
         }

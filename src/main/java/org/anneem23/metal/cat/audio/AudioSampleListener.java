@@ -9,6 +9,6 @@ package org.anneem23.metal.cat.audio;
  */
 public interface AudioSampleListener {
 
-    void updateSamples(double[] audioSamples);
+    void updateSamples(double[] audioSamples, long time);
 
 }

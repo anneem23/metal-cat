@@ -23,6 +23,7 @@ public class Brain implements AudioSampleListener {
 
     private final BeatTrackingAlgorithm beatTrackingAlgorithm;
     private final CopyOnWriteArrayList<Moveable> metalListeners = new CopyOnWriteArrayList<>();
+    private int tempo;
 
     private Brain(BeatTrackingAlgorithm algorithm) {
         beatTrackingAlgorithm = algorithm;
@@ -38,29 +39,32 @@ public class Brain implements AudioSampleListener {
     }
 
     @Override
-    public void updateSamples(double[] audioData) {
-        double[] buffer = new double[Shared.HOP_SIZE];	// buffer to hold one Shared.HOP_SIZE worth of audio samples
+    public void updateSamples(double[] audioData, long time) {
+        // buffer to hold one Shared.HOP_SIZE worth of audio samples
+        double[] buffer = new double[Shared.HOP_SIZE];
 
         // get number of audio frames, given the hop size and signal length
         double numFrames = (int) Math.floor(((double) audioData.length) / ((double) Shared.HOP_SIZE));
 
         for (int i=0;i < numFrames;i++) {
             // add new samples to frame
-            System.arraycopy(audioData, (i * Shared.HOP_SIZE) + 0, buffer, 0, Shared.HOP_SIZE);
+            System.arraycopy(audioData, i * Shared.HOP_SIZE, buffer, 0, Shared.HOP_SIZE);
 
             beatTrackingAlgorithm.processAudioFrame(buffer);
             if (beatTrackingAlgorithm.isBeatDueInFrame()) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("beat found.");
+                if (LOGGER.isInfoEnabled()) {
+                    LOGGER.info("beat found at " + ((double) time / 1000) + " seconds.");
                 }
-                moveAll(beatTrackingAlgorithm.getTempo());
+                tempo = beatTrackingAlgorithm.getTempo();
+                moveAll(tempo);
             }
         }
-
     }
 
     private void moveAll(int tempo) {
-        LOGGER.info("tempo = " + tempo);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("tempo = " + tempo);
+        }
         for (Moveable moveable : metalListeners) {
             try {
                 moveable.dance(tempo);
@@ -68,5 +72,9 @@ public class Brain implements AudioSampleListener {
                 LOGGER.error("MetalCat can't move!", e);
             }
         }
+    }
+
+    public int currentTempo() {
+        return tempo;
     }
 }

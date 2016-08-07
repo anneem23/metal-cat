@@ -8,6 +8,7 @@ import java.io.IOException;
  * An AudioProcessor to read chunks of audio data
  * from a {@link TargetDataLine}.
  *
+ * @author anneem23
  */
 public class TargetDataLineProcessor implements AudioProcessor {
 
@@ -20,7 +21,7 @@ public class TargetDataLineProcessor implements AudioProcessor {
 
     @Override
     public void openStream() throws Exception {
-        dataLine.open(new AudioFormat(48000, 16, 1, true, false));
+        dataLine.open(dataLine.getFormat());
         dataLine.start();
     }
 

@@ -22,9 +22,9 @@ class AudioInputPrinter {
     private static final Logger LOGGER = LoggerFactory.getLogger(AudioInputPrinter.class);
 
     public static void main(String[] args) throws LineUnavailableException {
-        AudioFormat format = new AudioFormat(48000, 16, 1, true, false);
 
-        DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class, format);
+
+        DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class, Shared.AUDIO_FORMAT);
 
         Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
         for (Mixer.Info info: mixerInfos){

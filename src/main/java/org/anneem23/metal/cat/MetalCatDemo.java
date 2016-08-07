@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
 
-import static org.anneem23.metal.cat.audio.Shared.SAMPLE_RATE;
 import static org.anneem23.metal.cat.audio.Shared.getMixerInfo;
 
 /**
@@ -16,14 +15,11 @@ import static org.anneem23.metal.cat.audio.Shared.getMixerInfo;
  */
 class MetalCatDemo {
 
-    private static final AudioFormat AUDIO_FORMAT = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
-    private static final DataLine.Info DATA_LINE_INFO = new DataLine.Info(TargetDataLine.class, AUDIO_FORMAT);
-
     private MetalCatDemo() {}
 
 
     public static void main(String[] args) throws LineUnavailableException {
-        final Scanner scan=new Scanner(System.in);
+        final Scanner scan = new Scanner(System.in);
         System.out.println("Select a microphone from the list below: ");
 
         final MetalCat metalCat;
@@ -37,7 +33,7 @@ class MetalCatDemo {
 
         TargetDataLine line;
         try (Mixer mixer = AudioSystem.getMixer(getMixerInfo(false, true).get(scan.nextInt()))) {
-            line = (TargetDataLine) mixer.getLine(DATA_LINE_INFO);
+            line = (TargetDataLine) mixer.getLine(mixer.getTargetLineInfo()[0]);
             metalCat = new MetalCat(line);
             metalCat.waitForMusic();
         } catch (UnsupportedAudioFileException | IOException e) {

@@ -23,9 +23,7 @@ class MicrophoneRecorder {
     private static final AudioFileFormat.Type fileType = AudioFileFormat.Type.WAVE;
 
     public static void main(String[] args) throws LineUnavailableException {
-        AudioFormat format = new AudioFormat(48000, 16, 1, true, false);
-
-        DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class, format);
+        DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class, Shared.AUDIO_FORMAT);
 
         Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
         for (Mixer.Info info: mixerInfos){
@@ -69,7 +67,7 @@ class MicrophoneRecorder {
 
                 if (mixer.isLineSupported(targetInfo)) {
                     TargetDataLine targetLine = (TargetDataLine) mixer.getLine(targetInfo);
-                    targetLine.open(format);
+                    targetLine.open(Shared.AUDIO_FORMAT);
                     targetLine.start();
 
                     AudioInputStream ais = new AudioInputStream(targetLine);

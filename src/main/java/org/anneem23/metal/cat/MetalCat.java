@@ -41,9 +41,12 @@ class MetalCat {
         this.brain.addMetalListener(arm);
     }
 
+    public int bpm() {
+        return brain.currentTempo();
+    }
 
 
-    private MetalCat(String fileName) throws IOException, UnsupportedAudioFileException {
+    public MetalCat(String fileName) throws IOException, UnsupportedAudioFileException {
         LOGGER.info("Creating metal cat:");
         this.arm = null;
         LOGGER.info("\tArm added!");

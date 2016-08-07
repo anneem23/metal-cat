@@ -6,8 +6,8 @@ import com.pi4j.io.gpio.PinState;
 import com.pi4j.io.gpio.RaspiPin;
 import com.pi4j.wiringpi.SoftPwm;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * MetalCats' Arm.
@@ -21,25 +21,40 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Arm implements Moveable {
 
-    private static final int START_POSITION = 15;
+    private final ExecutorService executorService;
+    private final ArmMovement armMovement;
 
     public Arm() {
-        final GpioController gpio = GpioFactory.getInstance();
-        gpio.provisionDigitalOutputPin(RaspiPin.GPIO_15, "Metal Cat Servo", PinState.LOW);
-        SoftPwm.softPwmCreate(RaspiPin.GPIO_15.getAddress(), START_POSITION, 200);
+        executorService = Executors.newFixedThreadPool(10);
+        armMovement = new ArmMovement();
     }
 
 
     @Override
     public void dance(int bpm) throws InterruptedException {
-        double hertz = bpm / 60.0;
-        int millis = (int) (1000 / hertz);
-
-        SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), 10);
-        Thread.sleep(millis);
-        SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), START_POSITION);
+        executorService.execute(armMovement::run);
     }
 
 
+    class ArmMovement implements Runnable {
+        private static final int START_POSITION = 15;
 
+        public ArmMovement() {
+            final GpioController gpio = GpioFactory.getInstance();
+            gpio.provisionDigitalOutputPin(RaspiPin.GPIO_15, "Metal Cat Servo", PinState.LOW);
+            SoftPwm.softPwmCreate(RaspiPin.GPIO_15.getAddress(), 0, 100);
+        }
+
+        @Override
+        public void run() {
+            try {
+                SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), 10);
+                Thread.sleep(100);
+                SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), START_POSITION);
+                //Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }

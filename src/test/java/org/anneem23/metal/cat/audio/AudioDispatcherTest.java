@@ -32,7 +32,7 @@ public class AudioDispatcherTest {
     }
 
     private void thenMockListenerWasInvokedTimes(int wantedNumberOfInvocations) {
-        verify(_listener, times(wantedNumberOfInvocations)).updateSamples(any(double[].class));
+        verify(_listener, times(wantedNumberOfInvocations)).updateSamples(any(double[].class), any(long.class));
     }
 
     private void whenExecutingDispatcher() throws InterruptedException {

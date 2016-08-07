@@ -13,7 +13,7 @@ public class Shared {
 	public static final int HOP_SIZE = 512;
 	public static final int FRAME_SIZE = 2* HOP_SIZE;
 
-	public static final AudioFormat AUDIO_FORMAT = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
+	public static final AudioFormat AUDIO_FORMAT = new AudioFormat(SAMPLE_RATE, 32, 1, true, false);
 
     private Shared() {}
 	

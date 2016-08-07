@@ -24,7 +24,7 @@ public class BeatTrackerIntegrationTest {
     public void test120BeatsTrackedFor120BpmTrack() throws IOException, UnsupportedAudioFileException {
         givenBTrackWithComplexSpectralDifference();
         whenTrackingBeatsOf("120bpm.wav");
-        thenNumberOfBeatsDetectedIs(121);
+        thenNumberOfBeatsDetectedIs(120);
     }
 
 
@@ -40,7 +40,7 @@ public class BeatTrackerIntegrationTest {
     public void test140BeatsTrackedFor140BpmTrack() throws IOException, UnsupportedAudioFileException {
         givenBTrackWithComplexSpectralDifference();
         whenTrackingBeatsOf("140bpm.wav");
-        thenNumberOfBeatsDetectedIs(141);
+        thenNumberOfBeatsDetectedIs(142);
     }
 
     private void givenBTrackWithComplexSpectralDifference() throws IOException {

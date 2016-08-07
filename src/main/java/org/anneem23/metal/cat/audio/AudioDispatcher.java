@@ -17,6 +17,7 @@ public class AudioDispatcher implements Runnable {
 
     private final CopyOnWriteArrayList<AudioSampleListener> listeners = new CopyOnWriteArrayList<>();
     private final AudioProcessor audioProcessor;
+    private long startTime;
 
     public AudioDispatcher(AudioProcessor audioProcessor) {
         this.audioProcessor = audioProcessor;
@@ -32,6 +33,7 @@ public class AudioDispatcher implements Runnable {
         final AudioSampleConverter sampleConverter = new AudioSampleConverter(audioProcessor.getFormat());
 
         try {
+            startTime = System.currentTimeMillis();
             audioProcessor.openStream();
             while (audioProcessor.bytesAvailable()) {
                 byte[] audioData = audioProcessor.readBytes(Shared.FRAME_SIZE);
@@ -45,6 +47,6 @@ public class AudioDispatcher implements Runnable {
 
     private void dispatch(double[] audioSamples) {
         for (AudioSampleListener listener : listeners)
-            listener.updateSamples(audioSamples);
+            listener.updateSamples(audioSamples, (System.currentTimeMillis() - startTime));
     }
 }

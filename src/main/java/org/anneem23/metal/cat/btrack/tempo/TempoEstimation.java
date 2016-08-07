@@ -54,17 +54,20 @@ public class TempoEstimation {
     private final double[] previousDeltas;
 
 
-    public TempoEstimation(int hopSize) {
+    public TempoEstimation(int hopSize, float sampleRate) {
         this.hopSize = hopSize;
+        // initialize beat period with 120 bpm
+        this.beatPeriod = Math.round(60 / ((((double) hopSize) / sampleRate) * 120));
 
         // tempo
         this.tempoObservationVector = new double[41];
         // deltas
         this.deltas = new double[41];
-
-        final double rayparam = 43;
+        // weighting
         this.weightingVector = new float[128];
+
         // create rayleigh weighting vector
+        final double rayparam = 43;
         for (int n = 0;n < 128;n++){
             this.weightingVector[n] = (float) weightingFactor(rayparam, n);
         }
@@ -83,8 +86,8 @@ public class TempoEstimation {
         this.tempoTransitionMatrix = new double[41][41];
         for (int i = 0;i < 41;i++) {
             for (int j = 0;j < 41;j++) {
-                double x = (double) j + 1;
-                double tMu = (double) i + 1;
+                final double x = (double) j + 1;
+                final double tMu = (double) i + 1;
                 // standard deviation σ = (tmax − tmin)/8
                 double fixedStandardDerivation = (double) 41 / 8;
                 tempoTransitionMatrix[i][j] = (1 / (fixedStandardDerivation * Math.sqrt(2*Math.PI))) * gaussian(x, tMu, fixedStandardDerivation);
@@ -94,6 +97,10 @@ public class TempoEstimation {
 
     public double tempo() {
         return estimatedTempo;
+    }
+
+    public float beatPeriod() {
+        return beatPeriod;
     }
 
     /**
@@ -124,12 +131,12 @@ public class TempoEstimation {
      *             detection funtion
      */
     public void calculateTempo(double[] data) {
-        System.out.println(Arrays.toString(data));
+//        System.out.println(Arrays.toString(data));
         // adaptive threshold on input (II)
-        double[] adaptiveThreshold = adaptiveThreshold(data, 512);
+        final double[] adaptiveThreshold = adaptiveThreshold(data, 512);
 
         // calculate auto-correlation onset of detection onset (III)
-        double[] balancedAutoCorrelationFunction = calculateBalancedAutoCorrelationFunction(adaptiveThreshold);
+        final double[] balancedAutoCorrelationFunction = calculateBalancedAutoCorrelationFunction(adaptiveThreshold);
 
         // calculate output of comb filterbank (IV)
         double[] combFilterBankOutput = calculateOutputOfCombFilterBank(balancedAutoCorrelationFunction);
@@ -141,11 +148,11 @@ public class TempoEstimation {
         // we track beats in the range of 80 - 160 bpm
         for (int i = 0;i < 41;i++) {
             // the temporal resolution of the onset detection function in seconds
-            double tempoToLagFactor = 60. * (Shared.SAMPLE_RATE / (float) Shared.HOP_SIZE);
+            final double tempoToLagFactor = 60. * (Shared.SAMPLE_RATE / (float) Shared.HOP_SIZE);
             // lower bounds at 80 bpm
-            int index = (int) Math.round(tempoToLagFactor / ((double) ((2*i)+ MIN_BPM)));
+            final int index = (int) Math.round(tempoToLagFactor / ((2 * i) + MIN_BPM));
             // upper bounds at 160 bpm
-            int index2 = (int) Math.round(tempoToLagFactor / ((double) ((4*i)+ MAX_BPM)));
+            final int index2 = (int) Math.round(tempoToLagFactor / ((4 * i) + MAX_BPM));
 
             tempoObservationVector[i] = combFilterBankOutput[index-1] + combFilterBankOutput[index2-1];
         }
@@ -157,7 +164,7 @@ public class TempoEstimation {
         for (int j=0;j < 41;j++) {
             double maxval = -1;
             for (int i = 0;i < 41;i++) {
-                double curval = previousDeltas[i] * tempoTransitionMatrix[i][j];
+                final double curval = previousDeltas[i] * tempoTransitionMatrix[i][j];
                 if (curval > maxval) {
                     maxval = curval;
                 }
@@ -186,7 +193,7 @@ public class TempoEstimation {
             previousDeltas[j] = deltas[j];
         }
 
-        //TODO why this? round((60.0*44100.0)/(((2*maxind)+80)*((double) hopSize)));
+        //TODO why this? round((60.0*44100.0)/(((2*maxidx)+80)*((double) hopSize)));
         beatPeriod = Math.round((60.0 * Shared.SAMPLE_RATE) / (((2 * maxIdx) + MIN_BPM) * ((double) hopSize)));
 
         if (beatPeriod > 0) {
@@ -206,7 +213,7 @@ public class TempoEstimation {
      */
     private double[] calculateBalancedAutoCorrelationFunction(double[] onsetDF) {
         //
-        double[] autoCorrelationFunction = new double[hopSize];
+        final double[] autoCorrelationFunction = new double[hopSize];
 
         // for l lags from 0-511
         for (int l = 0;l < 512;l++) {
@@ -232,17 +239,17 @@ public class TempoEstimation {
      * @return modified detection function of modified detection function??
      */
     private double[] adaptiveThreshold(double[] onsetDF, int dfSize) {
-        double[] thresholds = new double[dfSize];
-        double[] result = new double[dfSize];
+        final double[] thresholds = new double[dfSize];
+        final double[] result = new double[dfSize];
 
-        int post = 7;
-        int pre = 8;
+        final int post = 7;
+        final int pre = 8;
         // what is smaller, post or df size. This is to avoid accessing outside of arrays
-        int t = Math.min(dfSize,post);
+        final int t = Math.min(dfSize, post);
 
         // find threshold for first 't' samples, where a full average cannot be computed yet
         for (int i = 0;i <= t;i++) {
-            int k = Math.min(i+pre,dfSize);
+            final int k = Math.min(i + pre, dfSize);
             thresholds[i] = calculateMeanOfArray(onsetDF,1,k);
         }
         // find threshold for bulk of samples across a moving average from [i-pre,i+post]
@@ -252,7 +259,7 @@ public class TempoEstimation {
         }
         // for last few samples calculate threshold, again, not enough samples to do as above
         for (int i = dfSize-post;i < dfSize;i++) {
-            int k = Math.max(i-post,1);
+            final int k = Math.max(i - post, 1);
             thresholds[i] = calculateMeanOfArray(onsetDF,k,dfSize);
         }
 
@@ -299,9 +306,9 @@ public class TempoEstimation {
      */
     private void normaliseArray(double[] array) {
         double sum = 0;
-        for (int i = 0;i < array.length;i++) {
-            if (array[i] > 0) {
-                sum = sum + array[i];
+        for (final double value : array) {
+            if (value > 0) {
+                sum = sum + value;
             }
         }
 
@@ -322,13 +329,13 @@ public class TempoEstimation {
      * @return shift-invariant, weighted comb filter bank
      */
     private double[] calculateOutputOfCombFilterBank(double[] autoCorrelationFunction) {
-        double[] combFilterBankOutput = new double[128];
+        final double[] combFilterBankOutput = new double[128];
 
         for (int i = 0;i < 128;i++) {
             combFilterBankOutput[i] = 0;
         }
 
-        int numElem = 4;
+        final int numElem = 4;
         // max beat period
         for (int i = 2;i <= 127;i++) {
             // number of comb elements
@@ -347,15 +354,16 @@ public class TempoEstimation {
 
     /**
      * weighting factor utility method to create rayleigh weighting vector
+     * see: Rayleigh mixture distribution
      *
-     * @param rayparam
+     * @param rayParam
      * @param n
      * @return
      */
-    private static double weightingFactor(double rayparam, double n) {
-        //TODO (n / rayparam^2) * exp(( -1 * -n^2) / (2 * rayparam^2))
-        //TODO (n / rayparam^2) * gaussian(n, rayparam)?
-        return (n / Math.pow(rayparam, 2)) * Math.exp((-1 * Math.pow(-n, 2)) / (2 * Math.pow(rayparam, 2)));
+    private static double weightingFactor(double rayParam, double n) {
+        //TODO (n / rayParam^2) * exp(( -1 * -n^2) / (2 * rayParam^2))
+        //TODO (n / rayParam^2) * gaussian(n, rayParam)?
+        return (n / Math.pow(rayParam, 2)) * Math.exp((-1 * Math.pow(-n, 2)) / (2 * Math.pow(rayParam, 2)));
     }
 
     //TODO is that really a gaussian function?
