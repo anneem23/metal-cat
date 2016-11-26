@@ -1,6 +1,6 @@
 package org.anneem23.metal.cat.body;
 
-import org.anneem23.metal.cat.audio.AudioDispatcher;
+import org.anneem23.btrack.audio.AudioDispatcher;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -19,7 +19,7 @@ public class EarTest {
     @Mock private AudioDispatcher _audioDispatcherMock;
 
     @Test
-    public void canListen() throws IOException, UnsupportedAudioFileException, InterruptedException {
+    public void shouldUseAudioDispatcher() throws IOException, UnsupportedAudioFileException, InterruptedException {
         givenEarWithFileInput();
         whenListening();
         thenAudioDispatcherShouldRun();

@@ -1,10 +1,9 @@
 package org.anneem23.metal.cat.body;
 
-import com.pi4j.io.gpio.GpioController;
-import com.pi4j.io.gpio.GpioFactory;
-import com.pi4j.io.gpio.PinState;
-import com.pi4j.io.gpio.RaspiPin;
+import com.pi4j.io.gpio.*;
 import com.pi4j.wiringpi.SoftPwm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,25 +20,48 @@ import java.util.concurrent.Executors;
  */
 public class Arm implements Moveable {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Arm.class);
     private final ExecutorService executorService;
-    private final ArmMovement armMovement;
+    private final Runnable movement;
 
     public Arm() {
-        executorService = Executors.newFixedThreadPool(10);
-        armMovement = new ArmMovement();
+        executorService = Executors.newFixedThreadPool(1);
+        movement = new LedMovement();
     }
 
 
     @Override
     public void dance(int bpm) throws InterruptedException {
-        executorService.execute(armMovement::run);
+        movement.run();
+    }
+
+    class LedMovement implements Runnable {
+
+        private final GpioPinDigitalOutput pin;
+
+        public LedMovement() {
+            // create gpio controller
+            final GpioController gpio = GpioFactory.getInstance();
+
+            // provision gpio pin #01 as an output pin and turn on
+            pin = gpio.provisionDigitalOutputPin(RaspiPin.GPIO_01, "MetalLED", PinState.LOW);
+
+            // set shutdown state for this pin
+            pin.setShutdownOptions(true, PinState.LOW);
+            pin.low();
+        }
+
+        @Override
+        public void run() {
+            pin.toggle();
+        }
     }
 
 
-    class ArmMovement implements Runnable {
+    class ServoMovement implements Runnable {
         private static final int START_POSITION = 15;
 
-        public ArmMovement() {
+        public ServoMovement() {
             final GpioController gpio = GpioFactory.getInstance();
             gpio.provisionDigitalOutputPin(RaspiPin.GPIO_15, "Metal Cat Servo", PinState.LOW);
             SoftPwm.softPwmCreate(RaspiPin.GPIO_15.getAddress(), 0, 100);
@@ -53,7 +75,7 @@ public class Arm implements Moveable {
                 SoftPwm.softPwmWrite(RaspiPin.GPIO_15.getAddress(), START_POSITION);
                 //Thread.sleep(100);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LOGGER.error("Arm movement failed due to ", e);
             }
         }
     }

@@ -1,8 +1,8 @@
 package org.anneem23.metal.cat.body;
 
-import org.anneem23.metal.cat.audio.AudioDispatcher;
-import org.anneem23.metal.cat.audio.AudioInputStreamProcessor;
-import org.anneem23.metal.cat.audio.AudioProcessor;
+import org.anneem23.btrack.audio.AudioDispatcher;
+import org.anneem23.btrack.audio.AudioInputStreamProcessor;
+import org.anneem23.btrack.audio.AudioProcessor;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;

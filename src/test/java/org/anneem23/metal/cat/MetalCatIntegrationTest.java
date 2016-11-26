@@ -1,6 +1,6 @@
 package org.anneem23.metal.cat;
 
-import org.anneem23.metal.cat.btrack.BeatTrackerIntegrationTest;
+
 import org.junit.Test;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -29,7 +29,7 @@ public class MetalCatIntegrationTest {
     }
 
     public void givenFileResource(String resourceName) throws IOException, UnsupportedAudioFileException {
-        String fileName = BeatTrackerIntegrationTest.class.getResource("/" + resourceName).getFile();
+        String fileName = MetalCatIntegrationTest.class.getResource("/" + resourceName).getFile();
         metalCat = new MetalCat(fileName);
     }
 

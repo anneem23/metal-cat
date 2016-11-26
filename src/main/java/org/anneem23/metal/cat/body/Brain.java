@@ -1,10 +1,11 @@
 package org.anneem23.metal.cat.body;
 
-import org.anneem23.metal.cat.audio.AudioSampleListener;
-import org.anneem23.metal.cat.audio.Shared;
-import org.anneem23.metal.cat.btrack.BeatTracker;
-import org.anneem23.metal.cat.btrack.BeatTrackingAlgorithm;
-import org.anneem23.metal.cat.btrack.onset.ComplexSpectralDifference;
+
+import org.anneem23.btrack.BeatTracker;
+import org.anneem23.btrack.BeatTrackingAlgorithm;
+import org.anneem23.btrack.audio.AudioSampleListener;
+import org.anneem23.btrack.audio.Shared;
+import org.anneem23.btrack.onset.ComplexSpectralDifference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +25,8 @@ public class Brain implements AudioSampleListener {
     private final BeatTrackingAlgorithm beatTrackingAlgorithm;
     private final CopyOnWriteArrayList<Moveable> metalListeners = new CopyOnWriteArrayList<>();
     private int tempo;
+
+    private int beatCounter = 0;
 
     private Brain(BeatTrackingAlgorithm algorithm) {
         beatTrackingAlgorithm = algorithm;
@@ -52,10 +55,10 @@ public class Brain implements AudioSampleListener {
 
             beatTrackingAlgorithm.processAudioFrame(buffer);
             if (beatTrackingAlgorithm.isBeatDueInFrame()) {
-                if (LOGGER.isInfoEnabled()) {
-                    LOGGER.info("beat found at " + ((double) time / 1000) + " seconds.");
-                }
                 tempo = beatTrackingAlgorithm.getTempo();
+                if (LOGGER.isInfoEnabled()) {
+                    LOGGER.info((beatCounter++) + ". beat found at " + ((double) time / 1000) + " seconds (tempo=" + tempo + "bpm).");
+                }
                 moveAll(tempo);
             }
         }

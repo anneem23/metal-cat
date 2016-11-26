@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
 
-import static org.anneem23.metal.cat.audio.Shared.getMixerInfo;
+import static org.anneem23.btrack.audio.Shared.getMixerInfo;
 
 /**
  * Metal Cat Demo Client

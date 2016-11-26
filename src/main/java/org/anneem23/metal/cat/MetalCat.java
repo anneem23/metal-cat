@@ -1,7 +1,8 @@
 package org.anneem23.metal.cat;
 
-import org.anneem23.metal.cat.audio.AudioDispatcher;
-import org.anneem23.metal.cat.audio.TargetDataLineProcessor;
+
+import org.anneem23.btrack.audio.AudioDispatcher;
+import org.anneem23.btrack.audio.TargetDataLineProcessor;
 import org.anneem23.metal.cat.body.Arm;
 import org.anneem23.metal.cat.body.Brain;
 import org.anneem23.metal.cat.body.Ear;

@@ -20,22 +20,7 @@
     </repositories>
 
     <dependencies>
-        <dependency>
-            <groupId>org.fourthline.cling</groupId>
-            <artifactId>cling-core</artifactId>
-            <version>2.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.fourthline.cling</groupId>
-            <artifactId>cling-support</artifactId>
-            <version>2.0.1</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>seamless-swing</artifactId>
-                    <groupId>org.seamless</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+
         <dependency>
             <groupId>com.pi4j</groupId>
             <artifactId>pi4j-core</artifactId>
@@ -52,8 +37,8 @@
             <version>3.2</version>
         </dependency>
         <dependency>
-            <groupId>be.tarsos.dsp</groupId>
-            <artifactId>tarsos-dsp</artifactId>
+            <groupId>org.anneem23.btrack</groupId>
+            <artifactId>btrack</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
